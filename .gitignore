@@ -1,0 +1,9 @@
+dist/
+dist-worker/
+node_modules/
+.wrangler/
+.dev.vars
+worker-configuration.d.ts
+.env.development
+.env
+.env.production

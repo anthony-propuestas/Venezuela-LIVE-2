@@ -1,0 +1,43 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "venezuelalive",
+	"compatibility_date": "2025-06-17",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		"DEV_BYPASS_ALLOWED": "false",
+		"PREMIUM_ALIAS": "0000 0000 0000 0000 0000 0000"
+	},
+	"pages_build_output_dir": "./dist",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "venezuela-live-db",
+			"database_id": "3d94425c-e2e8-4fa5-9b29-d54d85caf56f"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "RATE_LIMIT_KV",
+			"id": "b8427d855bda452386f0e999b4084a2a"
+		},
+		{
+			"binding": "RATE_LIMIT",
+			"id": "b8427d855bda452386f0e999b4084a2a"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "R2_BUCKET",
+			"bucket_name": "019c9888-2bfb-7abf-a321-8db0f593ade0"
+		},
+		{
+			"bucket_name": "019c9888-2bfb-7abf-a321-8db0f593ade0",
+			"binding": "y"
+		}
+	]
+}

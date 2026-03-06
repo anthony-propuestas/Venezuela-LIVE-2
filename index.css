@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@config "./tailwind.config.cjs";
+
+body {
+  background-color: #000000;
+  color: #ffffff; /* Agrego color blanco para que el texto se vea sobre el fondo negro */
+  font-family: 'Inter', system-ui, sans-serif;
+}
