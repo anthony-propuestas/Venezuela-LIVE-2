@@ -1,7 +1,7 @@
 import Login, { LoginBypass, getStoredAuth, clearAuth, AUTH_PAUSED } from './login';
 import Profile from './Profile';
 import { useError } from '@client/context/ErrorContext';
-import * as api from './api';
+import * as api from '@client/services/api.service';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   ThumbsUp, 
