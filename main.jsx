@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './app.jsx'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { ErrorProvider, ErrorBanner } from '@client/context/ErrorContext'
-import { AUTH_PAUSED } from './login.jsx'
+import { AUTH_PAUSED } from '@client/pages/Login/Login.page'
 import '@client/assets/index.css'
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID

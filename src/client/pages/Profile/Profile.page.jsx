@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { User, Mail, Calendar, FileText, Tag, Plus, X, ChevronDown, ArrowLeft, LogOut, Camera, Loader2, Save, AtSign, CheckCircle, XCircle } from 'lucide-react';
-import { getStoredAuth, clearAuth, AUTH_PAUSED } from './login';
+import { getStoredAuth, clearAuth, AUTH_PAUSED } from '@client/pages/Login/Login.page';
 import { useError } from '@client/context/ErrorContext';
 import * as api from '@client/services/api.service';
 

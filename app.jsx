@@ -1,5 +1,5 @@
-import Login, { LoginBypass, getStoredAuth, clearAuth, AUTH_PAUSED } from './login';
-import Profile from './Profile';
+import Login, { LoginBypass, getStoredAuth, clearAuth, AUTH_PAUSED } from '@client/pages/Login/Login.page';
+import Profile from '@client/pages/Profile/Profile.page';
 import { useError } from '@client/context/ErrorContext';
 import * as api from '@client/services/api.service';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
