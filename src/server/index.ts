@@ -1,18 +1,13 @@
 /// <reference types="@cloudflare/workers-types" />
-import { Hono, type Context } from 'hono';
-import { jwtVerify, createRemoteJWKSet } from 'jose';
+import { Hono } from 'hono';
 import { handleGetReport, handleCronReports } from './domain/reports/controllers';
 import { registerGamificationListener } from './domain/gamification/index.js';
-import { checkAndIncrement, type RateLimitAction } from './rateLimit.js';
+import { checkAndIncrement, type RateLimitAction } from './middlewares/rateLimit.middleware.js';
+import { createAuthMiddleware } from './middlewares/auth.middleware.js';
+import { createErrorHandler } from './middlewares/errors.middleware.js';
 import { isUserPremium, createPaymentTicket, getTicketsByUser } from './premium.js';
 import type { Env, User } from './types.js';
-import {
-  mapErrorToResponseBody,
-  UnauthorizedError,
-  ValidationError,
-  ConflictError,
-  NotFoundError,
-} from './errors';
+import { ValidationError, ConflictError, NotFoundError } from './errors';
 import { getCronSecret, getGoogleClientId, getPremiumAlias, isDevBypassAllowed } from './config';
 import {
   getGamificationForUser,
@@ -32,7 +27,6 @@ import {
 
 registerGamificationListener();
 
-const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 const MAX_PHOTO_SIZE = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const USERNAME_MIN = 3;
@@ -43,64 +37,8 @@ type AppBindings = { Bindings: Env; Variables: { user: User } };
 
 const app = new Hono<AppBindings>();
 
-const jwks = createRemoteJWKSet(new URL(GOOGLE_JWKS_URL));
-
-const DEV_BYPASS_TOKEN = '__dev_bypass__';
-const DEV_BYPASS_USER: User = {
-  userId: 'dev-bypass-user',
-  email: 'pruebas@local',
-  name: 'Usuario Pruebas',
-};
-
-async function verifyAuth(c: Context<AppBindings>): Promise<User | null> {
-  const auth = c.req.raw.headers.get('Authorization');
-  const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!token) return null;
-
-  if (token === DEV_BYPASS_TOKEN && isDevBypassAllowed(c.env)) {
-    return DEV_BYPASS_USER;
-  }
-
-  let clientId: string;
-  try {
-    clientId = getGoogleClientId(c.env);
-  } catch {
-    // Si la configuración es inválida, tratamos como no autorizado para no filtrar detalles de config aquí.
-    return null;
-  }
-  try {
-    const { payload } = await jwtVerify(token, jwks, { audience: clientId });
-    const userId = payload.sub as string;
-    const email = (payload.email as string) || '';
-    const name = (payload.name as string) || '';
-    return { userId, email, name };
-  } catch {
-    return null;
-  }
-}
-
-app.use('/api/*', async (c, next) => {
-  // Endpoints internos que NO deben requerir JWT de Google (p.ej. cron externo).
-  if (c.req.path === '/api/cron/weekly-reports') {
-    await next();
-    return;
-  }
-  const user = await verifyAuth(c);
-  if (!user) {
-    const unauthorized = new UnauthorizedError();
-    const { status, body } = mapErrorToResponseBody(unauthorized, isDevBypassAllowed(c.env));
-    return c.json(body, status);
-  }
-  c.set('user', user);
-  await next();
-});
-
-app.onError((err, c) => {
-  console.error('Unhandled error in Hono app:', err);
-  const includeDetail = isDevBypassAllowed(c.env);
-  const { status, body } = mapErrorToResponseBody(err, includeDetail);
-  return c.json(body, status);
-});
+app.use('/api/*', createAuthMiddleware());
+app.onError(createErrorHandler());
 
 app.get('/api/profile', async (c) => {
   const { userId } = c.get('user');
@@ -368,8 +306,18 @@ app.get('/api/reports/weekly/volume', (c) => handleGetReport(c, 'volume'));
 
 /** Cron semanal invocado por HTTP (Pages no tiene scheduled). Solo header X-Cron-Secret (no query, evita logs/Referrer). */
 app.all('/api/cron/weekly-reports', async (c) => {
-  const expected = getCronSecret(c.env);
   const secret = c.req.header('X-Cron-Secret');
+  const devBypass = isDevBypassAllowed(c.env);
+  if (devBypass && secret) {
+    try {
+      await handleCronReports(c.env);
+      return c.json({ ok: true });
+    } catch (err) {
+      console.error('Cron weekly-reports:', err);
+      return c.json({ error: 'Error al ejecutar el cron' }, 500);
+    }
+  }
+  const expected = getCronSecret(c.env);
   if (!secret || secret !== expected) {
     return c.json({ error: 'No autorizado' }, 401);
   }
