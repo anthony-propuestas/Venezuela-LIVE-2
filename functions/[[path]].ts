@@ -3,8 +3,8 @@
  * Catch-all de Pages Functions: delega en la app Hono.
  * EventContext nativo de Pages; env (D1, KV, R2, ASSETS) viene en context.env.
  */
-import { app } from '../src/worker/index.js';
-import type { Env } from '../src/worker/types.js';
+import { app } from '../src/server/index.js';
+import type { Env } from '../src/server/types.js';
 
 /** Contexto nativo de Pages Functions (request, env, params, next, waitUntil, etc.). */
 interface PagesEventContext {
