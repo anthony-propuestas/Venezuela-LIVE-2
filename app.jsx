@@ -1,6 +1,6 @@
 import Login, { LoginBypass, getStoredAuth, clearAuth, AUTH_PAUSED } from './login';
 import Profile from './Profile';
-import { useError } from './ErrorContext';
+import { useError } from '@client/context/ErrorContext';
 import * as api from './api';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 

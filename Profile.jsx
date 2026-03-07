@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { User, Mail, Calendar, FileText, Tag, Plus, X, ChevronDown, ArrowLeft, LogOut, Camera, Loader2, Save, AtSign, CheckCircle, XCircle } from 'lucide-react';
 import { getStoredAuth, clearAuth, AUTH_PAUSED } from './login';
-import { useError } from './ErrorContext';
+import { useError } from '@client/context/ErrorContext';
 import * as api from './api';
 
 const MAX_PHOTO_SIZE_BYTES = 2 * 1024 * 1024;

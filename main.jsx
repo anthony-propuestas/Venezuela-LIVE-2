@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './app.jsx'
 import { GoogleOAuthProvider } from '@react-oauth/google'
-import { ErrorProvider, ErrorBanner } from './ErrorContext.jsx'
+import { ErrorProvider, ErrorBanner } from '@client/context/ErrorContext'
 import { AUTH_PAUSED } from './login.jsx'
 import '@client/assets/index.css'
 
