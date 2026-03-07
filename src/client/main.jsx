@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './app.jsx'
+import App from '@client/App'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { ErrorProvider, ErrorBanner } from '@client/context/ErrorContext'
 import { AUTH_PAUSED } from '@client/pages/Login/Login.page'
