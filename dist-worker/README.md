@@ -1,1 +1,0 @@
-This folder contains the built output assets for the worker "venezuelalive" generated at 2026-03-03T03:59:00.142Z.
