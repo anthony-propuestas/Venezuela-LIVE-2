@@ -43,6 +43,9 @@ await esbuild.build({
   sourcemap: false,
   minify: true,
   outExtension: { '.js': '.js' },
+  alias: {
+    '@shared': path.join(root, 'src', 'shared'),
+  },
 });
 
 console.log('Pages Functions compiladas en dist/functions/');

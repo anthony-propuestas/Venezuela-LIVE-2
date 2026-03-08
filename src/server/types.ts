@@ -18,4 +18,4 @@ export type Env = {
   CRON_SECRET: string;
 };
 
-export type User = { userId: string; email: string; name: string };
+export type { User } from '@shared/types/api.types.js';

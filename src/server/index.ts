@@ -27,11 +27,10 @@ import {
 
 registerGamificationListener();
 
+import { USERNAME_MIN, USERNAME_MAX, USERNAME_REGEX } from '@shared/constants.js';
+
 const MAX_PHOTO_SIZE = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const USERNAME_MIN = 3;
-const USERNAME_MAX = 30;
-const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 
 type AppBindings = { Bindings: Env; Variables: { user: User } };
 
