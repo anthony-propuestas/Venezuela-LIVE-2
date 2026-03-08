@@ -1,0 +1,85 @@
+﻿{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "hono": {
+      "name": "hono",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        {
+          "source": 1114004,
+          "name": "hono",
+          "dependency": "hono",
+          "title": "Hono Vulnerable to Cookie Attribute Injection via Unsanitized domain and path in setCookie()",
+          "url": "https://github.com/advisories/GHSA-5pq2-9x2x-5p6w",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-113",
+            "CWE-1113"
+          ],
+          "cvss": {
+            "score": 5.4,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N"
+          },
+          "range": "<4.12.4"
+        },
+        {
+          "source": 1114005,
+          "name": "hono",
+          "dependency": "hono",
+          "title": "Hono Vulnerable to SSE Control Field Injection via CR/LF in writeSSE()",
+          "url": "https://github.com/advisories/GHSA-p6xx-57qc-3wxr",
+          "severity": "moderate",
+          "cwe": [
+            "CWE-74"
+          ],
+          "cvss": {
+            "score": 6.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N"
+          },
+          "range": "<4.12.4"
+        },
+        {
+          "source": 1114006,
+          "name": "hono",
+          "dependency": "hono",
+          "title": "Hono vulnerable to arbitrary file access via serveStatic vulnerability ",
+          "url": "https://github.com/advisories/GHSA-q5qw-h33p-qvwr",
+          "severity": "high",
+          "cwe": [
+            "CWE-177"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+          },
+          "range": "<4.12.4"
+        }
+      ],
+      "effects": [],
+      "range": "<=4.12.3",
+      "nodes": [
+        "node_modules/hono"
+      ],
+      "fixAvailable": true
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 1,
+      "critical": 0,
+      "total": 1
+    },
+    "dependencies": {
+      "prod": 75,
+      "dev": 83,
+      "optional": 106,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 220
+    }
+  }
+}
