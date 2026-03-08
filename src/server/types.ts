@@ -2,7 +2,6 @@
  * Tipos para el backend (Pages Functions / Worker).
  * En Pages, context.env cumple EnvWithFetch; ASSETS lo inyecta el runtime.
  */
-
 export type Env = {
   DB: D1Database;
   R2_BUCKET: R2Bucket;
@@ -16,6 +15,8 @@ export type Env = {
   PREMIUM_ALIAS?: string;
   /** Secreto para invocar el cron semanal vía HTTP (solo header X-Cron-Secret). */
   CRON_SECRET: string;
-};
+  /** Lista de correos permitidos (separados por coma). Solo ellos pueden acceder. */
+  ALLOWLIST_EMAILS: string;
+}
 
 export type { User } from '@shared/types/api.types.js';

@@ -286,6 +286,18 @@ export default function App() {
   const handleProfileBack = useCallback(() => setCurrentPage('home'), []);
   const handleProfileLogout = useCallback(() => setEstaAutenticado(false), []);
 
+  /** Si el error es 403 (correo no en allowlist), cierra sesión y muestra banner. Devuelve true si se manejó. */
+  const handleAccessDenied = useCallback(
+    (err) => {
+      if (err?.code !== 'ACCESS_DENIED') return false;
+      addError(err?.message || 'Acceso denegado. Correo no autorizado.');
+      clearAuth();
+      setEstaAutenticado(false);
+      return true;
+    },
+    [addError]
+  );
+
   // Comprobar sesión expirada (token Google) al recuperar foco o cada 60s
   useEffect(() => {
     if (!estaAutenticado) return;
@@ -314,7 +326,8 @@ export default function App() {
         setRateLimitModal({ action: result.action || 'proposals', reason: result.reason });
         return;
       }
-    } catch {
+    } catch (err) {
+      if (handleAccessDenied(err)) return;
       addError?.('No se pudo crear la propuesta. Intenta de nuevo.');
       return;
     }
@@ -354,7 +367,8 @@ export default function App() {
         setRateLimitModal({ action: result.action || 'comments', reason: result.reason });
         return false;
       }
-    } catch {
+    } catch (err) {
+      if (handleAccessDenied(err)) return false;
       addError?.('No se pudo publicar el comentario. Intenta de nuevo.');
       return false;
     }
@@ -532,7 +546,8 @@ export default function App() {
         setRateLimitModal({ action: result.action || 'likes', reason: result.reason });
         return;
       }
-    } catch {
+    } catch (err) {
+      if (handleAccessDenied(err)) return;
       addError?.('No se pudo procesar el voto. Intenta de nuevo.');
       return;
     }
@@ -1160,6 +1175,7 @@ export default function App() {
                     try {
                       await api.downloadReport('positives');
                     } catch (err) {
+                      if (handleAccessDenied(err)) return;
                       addError(err?.message || 'Error al descargar reporte Consenso.');
                     } finally {
                       setReportDownloading(null);
@@ -1177,6 +1193,7 @@ export default function App() {
                     try {
                       await api.downloadReport('volume');
                     } catch (err) {
+                      if (handleAccessDenied(err)) return;
                       addError(err?.message || 'Error al descargar reporte Conflicto.');
                     } finally {
                       setReportDownloading(null);
@@ -1194,6 +1211,7 @@ export default function App() {
                     try {
                       await api.downloadReport('negatives');
                     } catch (err) {
+                      if (handleAccessDenied(err)) return;
                       addError(err?.message || 'Error al descargar reporte Rechazo.');
                     } finally {
                       setReportDownloading(null);
@@ -1836,6 +1854,7 @@ export default function App() {
                     await api.submitPaymentTicket({ reference: ticketForm.reference.trim(), paymentDate: ticketForm.paymentDate.trim(), amount: Number(ticketForm.amount) });
                     setTicketSubmitted(true);
                   } catch (err) {
+                    if (handleAccessDenied(err)) return;
                     addError?.(err?.message || 'Error al enviar el ticket.');
                   } finally {
                     setTicketSubmitting(false);

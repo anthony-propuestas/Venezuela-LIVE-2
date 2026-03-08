@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { GoogleLogin, useGoogleOneTapLogin } from '@react-oauth/google';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { validateCredential } from '@client/services/api.service';
 
 const AUTH_STORAGE_KEY = 'venezuelaLive_auth';
 
@@ -170,16 +171,21 @@ export default function Login({ setEstaAutenticado }) {
   const [loginError, setLoginError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleSuccess = useCallback((response) => {
+  const handleSuccess = useCallback(async (response) => {
     const credential = response?.credential;
     if (!credential) return;
     setIsProcessing(true);
     setLoginError(null);
     try {
+      const validation = await validateCredential(credential);
+      if (!validation.ok && validation.status === 403) {
+        setLoginError(validation.error || 'Acceso denegado. Correo no autorizado.');
+        return;
+      }
       saveAuth(credential);
       setEstaAutenticado(true);
     } catch (e) {
-      setLoginError('No se pudo guardar la sesión. Intenta de nuevo.');
+      setLoginError(e?.message || 'No se pudo guardar la sesión. Intenta de nuevo.');
     } finally {
       setIsProcessing(false);
     }

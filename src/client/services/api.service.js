@@ -20,6 +20,22 @@ const getCredential = () => {
   }
 };
 
+/**
+ * Valida el credential con el backend antes de guardar sesión.
+ * Si el servidor responde 403 (correo no en allowlist), no se debe guardar nada.
+ * @returns {{ ok: true }} | {{ ok: false, status: 403, error: string }}
+ */
+export async function validateCredential(credential) {
+  const res = await fetch(`${API_BASE}/api/profile`, {
+    headers: { Authorization: `Bearer ${credential}` },
+  });
+  if (res.status === 403) {
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, status: 403, error: data?.error || 'Acceso denegado. Correo no autorizado.' };
+  }
+  return { ok: true };
+}
+
 async function apiFetch(path, options = {}) {
   const credential = getCredential();
   if (!credential) {
@@ -41,16 +57,20 @@ async function apiFetch(path, options = {}) {
     if (res.status === 401) {
       throw new Error('SESSION_EXPIRED');
     }
+    if (res.status === 403) {
+      const err = new Error(data?.error || 'Acceso denegado. Correo no autorizado.');
+      err.code = 'ACCESS_DENIED';
+      throw err;
+    }
     const code = data?.error;
     const message = data?.message;
     let msg = message || code || `Error del servidor (${res.status})`;
     if (res.status === 500 && data?.detail) msg += ` — ${data.detail}`;
     const err = new Error(msg);
     if (code) {
-      // Anclar el código de error para lógica de UI más específica.
       err.code = code;
     }
-    throw new Error(msg);
+    throw err;
   }
   return data;
 }
@@ -82,6 +102,11 @@ export async function checkUsernameAvailability(username) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401) throw new Error('SESSION_EXPIRED');
+    if (res.status === 403) {
+      const e = new Error(data?.error || 'Acceso denegado. Correo no autorizado.');
+      e.code = 'ACCESS_DENIED';
+      throw e;
+    }
     const code = data?.error;
     const message = data?.message;
     // 500: error de servidor — no interpretar como "username en uso"
@@ -119,6 +144,11 @@ export async function downloadReport(type) {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
+    if (res.status === 403) {
+      const e = new Error(data?.error || 'Acceso denegado. Correo no autorizado.');
+      e.code = 'ACCESS_DENIED';
+      throw e;
+    }
     throw new Error(data?.error || `Error al descargar (${res.status})`);
   }
   const blob = await res.blob();
@@ -148,6 +178,11 @@ export async function consumeAction(action) {
   }
   if (!res.ok) {
     if (res.status === 401) throw new Error('SESSION_EXPIRED');
+    if (res.status === 403) {
+      const e = new Error(data?.error || 'Acceso denegado. Correo no autorizado.');
+      e.code = 'ACCESS_DENIED';
+      throw e;
+    }
     throw new Error(data?.error || `Error (${res.status})`);
   }
   return { ok: true };

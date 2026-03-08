@@ -14,6 +14,10 @@ function isSessionExpired(err) {
   return err?.message === 'SESSION_EXPIRED';
 }
 
+function isAccessDenied(err) {
+  return err?.code === 'ACCESS_DENIED';
+}
+
 export default function Profile({
   onBack,
   onLogout,
@@ -43,6 +47,12 @@ export default function Profile({
 
   const handleApiError = useCallback(
     (err) => {
+      if (isAccessDenied(err)) {
+        addError(err?.message || 'Acceso denegado. Correo no autorizado.', 'error');
+        clearAuth();
+        onLogout();
+        return;
+      }
       if (isSessionExpired(err) || (err?.message && err.message.includes('autorizado'))) {
         if (AUTH_PAUSED) {
           addError('Modo pruebas: el perfil en el backend no está disponible. Ejecuta el worker con npm run dev:worker.', 'dev_profile_unavailable');
