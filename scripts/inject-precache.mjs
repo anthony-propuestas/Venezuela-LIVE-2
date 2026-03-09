@@ -21,7 +21,7 @@ const swTemplate = readFileSync(swTemplatePath, 'utf-8');
 const scripts = [...html.matchAll(/src="(\/assets\/[^"]+\.js)"/g)].map(m => m[1]);
 const styles = [...html.matchAll(/href="(\/assets\/[^"]+\.css)"/g)].map(m => m[1]);
 
-const precacheList = ['/', '/manifest.webmanifest', ...scripts, ...styles];
+const precacheList = ['/', '/favicon.ico', '/manifest.webmanifest', ...scripts, ...styles];
 
 // El SW espera la variable __PRECACHE__ inyectada
 const swWithPrecache = swTemplate.replace(

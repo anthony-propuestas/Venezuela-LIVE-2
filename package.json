@@ -19,6 +19,7 @@
         "db:migrate:local:gamification": "wrangler d1 execute venezuela-live-db --local --persist-to=%LOCALAPPDATA%\\venezuela-live-wrangler --file=./migrations/0005_create_achievements.sql && wrangler d1 execute venezuela-live-db --local --persist-to=%LOCALAPPDATA%\\venezuela-live-wrangler --file=./migrations/0006_create_user_achievements.sql && wrangler d1 execute venezuela-live-db --local --persist-to=%LOCALAPPDATA%\\venezuela-live-wrangler --file=./migrations/0007_add_gamification_to_profiles.sql",
         "db:migrate:local:safe": "powershell -ExecutionPolicy Bypass -File ./scripts/migrate-d1-local.ps1",
         "db:migrate:remote": "powershell -ExecutionPolicy Bypass -File ./scripts/migrate-d1-remote.ps1",
+        "favicon:generate": "node scripts/generate-favicon.mjs",
         "check:apis": "npm run db:migrate:local:safe && npm run build",
         "security:test:sanitize": "node ./scripts/test-sanitize.mjs"
     },
@@ -42,7 +43,9 @@
         "autoprefixer": "^10.4.27",
         "jsdom": "^28.1.0",
         "postcss": "^8.5.8",
+        "sharp": "^0.34.5",
         "tailwindcss": "^4.2.1",
+        "to-ico": "^1.1.5",
         "typescript": "^5.9.3",
         "wrangler": "^4.69.0"
     }
