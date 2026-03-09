@@ -20,7 +20,39 @@
 
 ---
 
-## Fase 1 – Inventario y mapeo de riesgos
+### Implementación actual en Venezuela LIVE
+
+En la implementación actual de Venezuela LIVE, el control B1 está materializado como una **política de “tokens fuera de Web Storage”** y un módulo de sesión en memoria:
+
+- **Sesión solo en memoria en el frontend**:
+  - Archivo clave: `src/client/auth/session.js`.
+  - Expone:
+    - `setSession({ credential, payload, expiresAt, isDevBypass })`: guarda la sesión actual en una variable interna, nunca en `localStorage`/`sessionStorage`.
+    - `getSession()` y `getCredential()`: devuelven la sesión/credential actual si no ha expirado; si ha expirado, limpian y devuelven `null`.
+    - `clearSession()`: elimina cualquier sesión en memoria.
+- **Login y modo pruebas sin Web Storage**:
+  - En `src/client/pages/Login/Login.page.jsx`:
+    - Al completar el login con Google, se decodifica el JWT, se calcula `expiresAt` y se llama a `setSession(...)`.
+    - El modo pruebas (bypass) también crea una sesión efímera en memoria (con un token especial), pero nunca toca `localStorage`.
+    - `getStoredAuth()` ahora es un adaptador que **lee desde la sesión en memoria** y devuelve el mismo shape que se usaba antes, evitando romper el resto de la app.
+- **Cliente HTTP alineado con la sesión en memoria**:
+  - En `src/client/services/api.service.js`:
+    - La función interna `getCredential()` delega en `@client/auth/session` en lugar de leer `localStorage`.
+    - Todas las peticiones a `/api/*` usan el credential recuperado en ese momento para construir `Authorization: Bearer <token>`.
+    - Si no hay credential (sesión expirada o inexistente), se lanza un error `SESSION_EXPIRED`, que el frontend utiliza para forzar al usuario a re-autenticarse.
+- **Uso de `localStorage` restringido a datos no sensibles**:
+  - Se mantiene `localStorage` únicamente para:
+    - `venezuelaLiveVotes`: registro de votos por propuesta.
+    - `venezuelaLiveNoteVotes`: votos sobre notas de la comunidad.
+  - Estos valores contienen solo identificadores de propuestas/notas y banderas de voto, **nunca tokens ni datos de identidad**.
+- **Efecto resultante**:
+  - No existen rutas de código que escriban JWTs o credenciales en `localStorage`/`sessionStorage`.
+  - Cualquier XSS que lea el Web Storage del navegador no puede exfiltrar tokens reutilizables de autenticación.
+  - La expiración de sesión se controla en memoria, lo que alinea el frontend con una postura Zero-Trust en el cliente.
+
+---
+
+## Anexo histórico – Fase 1: Inventario y mapeo de riesgos
 
 ### Paso 1.1 – Búsqueda exhaustiva de usos de `localStorage` y `sessionStorage`
 

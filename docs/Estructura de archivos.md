@@ -43,6 +43,8 @@ raíz/
 │   │   ├── App.jsx            # Router lógico por estado (currentPage); toda la UI principal
 │   │   ├── assets/
 │   │   │   └── index.css      # Estilos globales + Tailwind
+│   │   ├── auth/
+│   │   │   └── session.js     # Sesión de autenticación en memoria (sin localStorage/sessionStorage)
 │   │   ├── context/
 │   │   │   └── ErrorContext.jsx
 │   │   ├── pages/
@@ -71,18 +73,20 @@ raíz/
 │   │       │   ├── service.ts
 │   │       │   ├── dataLayer.ts
 │   │       │   └── pdfEngine.ts
-│   │       └── gamification/
-│   │           ├── index.ts   # API pública del módulo
-│   │           ├── types.ts
-│   │           ├── errors.ts
-│   │           ├── eventBus.ts
-│   │           ├── service.ts
-│   │           ├── listeners.ts
-│   │           └── integration.ts
+│   │       ├── gamification/
+│   │       │   ├── index.ts   # API pública del módulo
+│   │       │   ├── types.ts
+│   │       │   ├── errors.ts
+│   │       │   ├── eventBus.ts
+│   │       │   ├── service.ts
+│   │       │   ├── listeners.ts
+│   │       │   └── integration.ts
+│   │       └── media/
+│   │           └── sanitizer.ts       # Saneamiento de imágenes (elimina EXIF antes de guardar en R2)
 │   └── shared/
 │       ├── constants.ts       # USERNAME_MIN, USERNAME_MAX, USERNAME_REGEX
 │       └── types/
-│           ├── api.types.ts   # User, ProfileUpdateBody
+│           ├── api.types.ts   # User (con role), ProfileUpdateBody
 │           └── profile.types.ts
 ├── dist/                      # Generado: vite build + build-pages-functions
 │   ├── index.html
@@ -91,7 +95,13 @@ raíz/
 │   └── functions/
 │       └── [[path]].js        # Bundle de functions/[[path]].ts
 └── docs/
-    └── Estructura de archivos.md  # Este documento
+    ├── Estructura de archivos.md  # Este documento
+    └── PLAN SEGURIDAD Y USABILIDAD/
+        ├── Plan de accion global.md
+        └── Fase 2 Fortalecimiento Estructural de la Autenticación y Persistencia/
+            ├── B1 prevenir el almacenamiento de identificadores de sesión o JWTs en localStorage o sessionStorage.md
+            ├── B2 Mitiga contundentemente la asignación masiva de permisos y restringe las fugas de bases de datos completas.md
+            └── B3 Remueve y destruye instantáneamente todo rastro de metadatos EXIF .md
 ```
 
 ---
@@ -128,7 +138,21 @@ En resumen: **una sola función catch-all** recibe todo el tráfico y lo resuelv
 ### 4.1 Rutas API (backend)
 
 - **Prefijo fijo:** todas las rutas de la API están bajo **`/api/`**.
-- **Identificación por path y método:** por ejemplo `GET /api/profile`, `GET /api/profile/username/check`, `PUT /api/profile`, `POST /api/profile/photo`, `DELETE /api/profile/photo`, `GET /api/profile/photo` (devuelve la imagen), `POST /api/actions/consume`, `GET /api/premium/status`, `POST /api/premium/ticket`, `GET /api/reports/weekly/positives`, `GET /api/reports/weekly/negatives`, `GET /api/reports/weekly/volume`, `ALL /api/cron/weekly-reports`.
+- **Identificación por path y método:** por ejemplo:
+  - `GET /api/profile`
+  - `GET /api/profile/username/check`
+  - `PUT /api/profile`
+  - `POST /api/profile/photo`
+  - `DELETE /api/profile/photo`
+  - `GET /api/profile/photo`
+  - `POST /api/actions/consume`
+  - `GET /api/premium/status`
+  - `POST /api/premium/ticket`
+  - `GET /api/reports/weekly/positives`
+  - `GET /api/reports/weekly/negatives`
+  - `GET /api/reports/weekly/volume`
+  - `ALL /api/cron/weekly-reports`
+  - `ALL /api/cron/profile-photos-sanitize` (job interno para sanear EXIF de fotos de perfil ya almacenadas en R2).
 - **Excepción de autenticación:** la ruta `/api/cron/weekly-reports` no pasa por el middleware de auth; se protege con header `X-Cron-Secret`.
 - No hay versionado explícito en la URL (ej. no hay `/api/v1/`).
 
@@ -158,7 +182,8 @@ En resumen: **una sola función catch-all** recibe todo el tráfico y lo resuelv
 - **Dominios:** subcarpetas bajo `src/server/domain/` con nombres de capacidad:
   - **reports:** controladores, servicio, capa de datos, generación PDF.
   - **gamification:** event bus, servicio, listeners, integración, tipos, errores; se exporta todo desde `index.ts`.
-- **Migraciones:** en `migrations/` con patrón **`NNNN_descripcion.sql`**. En el código existen exactamente **9 archivos:** `0001_create_profiles.sql`, `0002_add_username.sql`, `0003_create_proposals_schema.sql`, `0004_seed_proposals.sql`, `0005_create_achievements.sql`, `0006_create_user_achievements.sql`, `0007_add_gamification_to_profiles.sql`, `0008_add_is_premium_and_payment_tickets.sql`, `0009_add_unique_email_and_payment_reference.sql`. El número ordena la ejecución; no hay runner automático en el código, se ejecutan con scripts npm o PowerShell (`db:migrate:local:*`, `db:migrate:remote`, `migrate-d1-local.ps1`, `migrate-d1-remote.ps1`).
+  - **media:** saneamiento de imágenes (actualmente, eliminación de EXIF en fotos de perfil antes de persistir en R2).
+- **Migraciones:** en `migrations/` con patrón **`NNNN_descripcion.sql`**. En el código existen exactamente **10 archivos:** `0001_create_profiles.sql`, `0002_add_username.sql`, `0003_create_proposals_schema.sql`, `0004_seed_proposals.sql`, `0005_create_achievements.sql`, `0006_create_user_achievements.sql`, `0007_add_gamification_to_profiles.sql`, `0008_add_is_premium_and_payment_tickets.sql`, `0009_add_unique_email_and_payment_reference.sql`, `0010_add_role_to_profiles.sql`. El número ordena la ejecución; no hay runner automático en el código, se ejecutan con scripts npm o PowerShell (`db:migrate:local:*`, `db:migrate:remote`, `migrate-d1-local.ps1`, `migrate-d1-remote.ps1`).
 
 ### 4.5 Identificación de errores
 

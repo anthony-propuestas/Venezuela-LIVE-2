@@ -27,7 +27,51 @@
 
 ---
 
-## Fase 1 – Inventario y modelo de datos de seguridad
+### Implementación actual en Venezuela LIVE
+
+En la implementación actual, el control B2 se refleja en un **modelo de roles básico** y en el diseño de la API y consultas a D1 para evitar lecturas o escrituras globales:
+
+- **Rol de usuario en la base de datos (D1)**:
+  - La tabla `profiles` incluye la columna:
+    - `role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'moderator', 'admin'))` (migración `0010_add_role_to_profiles.sql`).
+  - Esta columna actúa como **fuente de verdad de RBAC** para todo el backend.
+- **Tipo compartido `User` enriquecido con `role`**:
+  - En `src/shared/types/api.types.ts`:
+    - `User` se define como `{ userId: string; email: string; name: string; role: 'user' | 'moderator' | 'admin' }`.
+  - Tanto el servidor (`src/server`) como el cliente que consuma este tipo comparten la misma noción de rol.
+- **Middleware de autenticación con resolución de rol**:
+  - Archivo: `src/server/middlewares/auth.middleware.ts`.
+  - Flujo:
+    - Verifica el JWT de Google usando JWKS (`jwtVerify`).
+    - Extrae `sub` (userId), `email` y `name`.
+    - Realiza una consulta a D1:
+      - `SELECT role FROM profiles WHERE user_id = ?`.
+      - Si la consulta devuelve `'user'`, `'moderator'` o `'admin'`, se usa ese rol; en cualquier otro caso o error, se degrada a `'user'`.
+    - Inyecta en el contexto Hono (`c.set('user', user)`) un objeto con `{ userId, email, name, role }`.
+    - El usuario de bypass de desarrollo (`__dev_bypass__`) se crea siempre con rol `'user'`.
+- **API diseñada para evitar lecturas masivas**:
+  - Rutas como `/api/profile`, `/api/profile/photo`, `/api/premium/status`, `/api/premium/ticket`, `/api/actions/consume` y el dominio de gamificación:
+    - Siempre trabajan acotadas por el `userId` autenticado.
+    - No existen endpoints que devuelvan:
+      - Listados completos de usuarios.
+      - Listas globales de `payment_tickets` u otras tablas sensibles.
+  - El repositorio de perfiles (`src/server/repositories/profile.repository.ts`):
+    - `getProfileByUserId`, `getPhotoKeyByUserId`, `getGamificationForUser` y helpers relacionados **siempre filtran por `user_id = ?`**.
+  - El módulo `premium.ts`:
+    - `getTicketsByUser` se limita a `WHERE user_id = ?`, evitando exponer tickets de otros usuarios.
+- **Base para futuros roles `moderator` y `admin`**:
+  - Aunque en la versión actual no hay endpoints expuestos específicamente para `moderator`/`admin`, el sistema ya:
+    - Resuelve `role` de forma centralizada.
+    - Puede evolucionar fácilmente:
+      - Añadiendo cheques de rol en rutas administrativas.
+      - Creando vistas reducidas para moderación.
+- **Efecto resultante**:
+  - Un token de usuario comprometido no puede usarse para descargar dumps completos de la base de datos.
+  - Las lecturas y escrituras se encuentran fuertemente vinculadas a la identidad (`userId`) y al contexto de la operación, cumpliendo el objetivo de mitigar permisos masivos y fugas por scraping.
+
+---
+
+## Anexo histórico – Fase 1: Inventario y modelo de datos de seguridad
 
 ### Paso 1.1 – Inventario de tablas/colecciones y rutas API asociadas
 

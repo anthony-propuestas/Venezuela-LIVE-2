@@ -10,6 +10,7 @@ Aplicación web desplegada en **Cloudflare Pages** (assets estáticos + Pages Fu
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Funcionalidades](#funcionalidades)
 - [Seguridad (Fase 1)](#seguridad-fase-1)
+- [Seguridad (Fase 2)](#seguridad-fase-2)
 - [API](#api)
 - [Base de datos y migraciones](#base-de-datos-y-migraciones)
 - [Desarrollo local](#desarrollo-local)
@@ -146,6 +147,74 @@ Con A1, A2 y A3 implementados, la Fase 1 de hardening descrita en el `Plan de ac
 
 ---
 
+## Seguridad (Fase 2)
+
+La **Fase 2** del plan de seguridad se centra en reforzar la autenticación, la persistencia de sesión y el control de acceso a datos sensibles. En este repositorio están implementados los controles B1, B2 y B3 descritos en el plan maestro y detallados en:
+
+- `docs/PLAN SEGURIDAD Y USABILIDAD/Fase 2 Fortalecimiento Estructural de la Autenticación y Persistencia/B1 prevenir el almacenamiento de identificadores de sesión o JWTs en localStorage o sessionStorage.md`
+- `docs/PLAN SEGURIDAD Y USABILIDAD/Fase 2 Fortalecimiento Estructural de la Autenticación y Persistencia/B2 Mitiga contundentemente la asignación masiva de permisos y restringe las fugas de bases de datos completas.md`
+- `docs/PLAN SEGURIDAD Y USABILIDAD/Fase 2 Fortalecimiento Estructural de la Autenticación y Persistencia/B3 Remueve y destruye instantáneamente todo rastro de metadatos EXIF .md`
+
+### B1 – Erradicación de tokens locales (localStorage / sessionStorage)
+
+- **Qué se ha hecho**:
+  - Se eliminó por completo el uso de `localStorage`/`sessionStorage` para almacenar credenciales o JWTs de autenticación.
+  - Se creó un módulo de sesión **en memoria** en el frontend:
+    - `src/client/auth/session.js` expone `setSession`, `getSession`, `clearSession` y `getCredential`.
+    - Los componentes de login (`Login.page.jsx`) guardan la sesión solo en memoria llamando a `setSession`, sin escribir nada en Web Storage.
+  - El cliente HTTP del frontend:
+    - `src/client/services/api.service.js` obtiene el token mediante `getCredential()` y construye el header `Authorization: Bearer ...` en cada llamada.
+    - Si no hay credencial en memoria, lanza `SESSION_EXPIRED` y fuerza al usuario a volver a iniciar sesión.
+  - Se documentó una **allowlist** de claves de `localStorage` permitidas únicamente para datos de UI no sensibles (`venezuelaLiveVotes`, `venezuelaLiveNoteVotes`).
+- **Efecto defensivo**:
+  - Un ataque XSS que logre leer `localStorage`/`sessionStorage` no encuentra tokens de sesión reutilizables.
+  - La superficie de ataque se reduce a la vida del proceso en memoria: al recargar/cerrar la pestaña, la sesión se pierde y es necesario autenticarse de nuevo.
+
+### B2 – Políticas de base de datos rigurosas y RBAC básico
+
+- **Qué se ha hecho**:
+  - Se añadió control de rol en la tabla principal de perfiles (`profiles`) mediante la migración:
+    - `migrations/0010_add_role_to_profiles.sql` → columna `role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'moderator', 'admin'))`.
+  - El tipo compartido de usuario autenticado se extendió con el rol:
+    - `src/shared/types/api.types.ts` define ahora `User = { userId, email, name, role }`.
+  - El middleware de autenticación (`src/server/middlewares/auth.middleware.ts`):
+    - Verifica el JWT de Google (o el token de bypass en desarrollo).
+    - Resuelve el `userId` en D1 y lee `profiles.role` para ese usuario.
+    - Inyecta en el contexto de cada petición un `user` con `role` (`'user'`, `'moderator'` o `'admin'`), degradando de forma segura a `'user'` si la columna aún no existe.
+  - Todas las rutas sensibles existentes (`/api/profile`, `/api/profile/photo`, `/api/premium/*`, `/api/actions/consume`, `/api/reports/*`) ya operan **acotadas por `userId`**:
+    - No hay endpoints que devuelvan dumps completos de usuarios, tickets u otras tablas sensibles.
+    - Las consultas en los repositorios (`profile.repository.ts`, `premium.ts`, dominio de gamificación) siempre filtran por `user_id` o usan agregados específicos.
+- **Efecto defensivo**:
+  - Se establece una **fuente de verdad de rol** en D1, desacoplada del JWT externo.
+  - El backend está preparado para introducir rutas específicas para `moderator`/`admin` con cheques de rol explícitos, minimizando el riesgo de fugas masivas o asignaciones de permisos excesivos.
+  - Incluso si un token de usuario estándar se ve comprometido, el atacante queda restringido a los datos de ese usuario y a vistas públicas agregadas.
+
+### B3 – Saneamiento de metadatos EXIF en fotos de perfil
+
+- **Qué se ha hecho**:
+  - Se introdujo un **pipeline de saneamiento de imágenes inline** en el backend:
+    - Módulo: `src/server/domain/media/sanitizer.ts`.
+    - Implementa `sanitizeImage(input: Uint8Array, mimeType: string)`, que:
+      - Solo acepta tipos `image/jpeg`, `image/jpg`, `image/png`, `image/webp`.
+      - Usa `@mary/exif-rm` para eliminar metadatos EXIF y relacionados del binario.
+      - Lanza un `InternalError` si el tipo no está soportado o si falla el saneamiento.
+  - Integración en la subida de fotos de perfil:
+    - En `POST /api/profile/photo` (`src/server/index.ts`), el flujo es ahora:
+      - Validación de tipo y tamaño del archivo.
+      - Conversión a `Uint8Array` (`originalBytes`).
+      - Llamada a `sanitizeImage(originalBytes, mt)` para obtener `{ buffer: cleanBuffer, mimeType }`.
+      - Solo `cleanBuffer` se persiste en R2 mediante `putProfilePhotoObject`.
+  - Migración de imágenes ya almacenadas en R2:
+    - Nueva ruta interna de cron: `ALL /api/cron/profile-photos-sanitize`.
+    - Lista objetos en R2 bajo el prefijo `profiles/` por lotes (paginación con `cursor` y `limit`).
+    - Para cada objeto:
+      - Descarga el cuerpo, lo pasa por `sanitizeImage` y sobrescribe la clave en R2 con la versión limpia y `contentType` correcto.
+    - Protegida con el mismo secreto `X-Cron-Secret` que el cron de reportes.
+- **Efecto defensivo**:
+  - Las fotos de perfil nuevas y las ya existentes en R2 quedan despojadas de metadatos EXIF:
+    - No exponen coordenadas GPS, fechas precisas de captura ni identificadores de dispositivo.
+  - Incluso si un atacante descarga directamente la imagen servida por `/api/profile/photo` y la inspecciona con herramientas forenses, no obtendrá información de localización ni de huella de dispositivo del usuario.
+
 ## API
 
 Todos los endpoints bajo `/api/*` requieren autenticación con Bearer JWT (Google), excepto el cron semanal que usa un header de secreto.
@@ -155,8 +224,8 @@ Todos los endpoints bajo `/api/*` requieren autenticación con Bearer JWT (Googl
 | GET | `/api/profile` | Obtiene perfil (datos, gamificación, isPremium). |
 | PUT | `/api/profile` | Actualiza perfil (displayName, username, birthDate, description, ideologies). |
 | GET | `/api/profile/username/check?username=...` | Comprueba disponibilidad del nombre de usuario. |
-| GET | `/api/profile/photo` | Devuelve la foto de perfil (stream). |
-| POST | `/api/profile/photo` | Sube foto (multipart, campo `photo`). |
+| GET | `/api/profile/photo` | Devuelve la foto de perfil saneada (sin metadatos EXIF). |
+| POST | `/api/profile/photo` | Sube foto (multipart, campo `photo`); la imagen se sanea (EXIF) antes de guardarse en R2. |
 | DELETE | `/api/profile/photo` | Elimina la foto de perfil. |
 | POST | `/api/actions/consume` | Consume cuota de rate limit (body: `{ "action": "likes" \| "comments" \| "proposals" }`). Devuelve 429 si se supera el límite. |
 | GET | `/api/premium/status` | Estado premium, alias de pago y lista de tickets. |
@@ -165,6 +234,7 @@ Todos los endpoints bajo `/api/*` requieren autenticación con Bearer JWT (Googl
 | GET | `/api/reports/weekly/negatives` | Descarga PDF reporte rechazo. |
 | GET | `/api/reports/weekly/volume` | Descarga PDF reporte conflicto. |
 | GET/POST | `/api/cron/weekly-reports` | Ejecuta el job semanal de reportes. Requiere header `X-Cron-Secret`. |
+| GET/POST | `/api/cron/profile-photos-sanitize` | Job de migración que reescribe fotos de perfil en R2 eliminando metadatos EXIF. Requiere header `X-Cron-Secret`. |
 
 Las respuestas de error siguen un cuerpo JSON con `error`, `message` y opcionalmente `fieldErrors` o `detail` (solo en desarrollo si está habilitado el bypass).
 

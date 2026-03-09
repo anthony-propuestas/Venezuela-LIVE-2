@@ -29,7 +29,50 @@
 
 ---
 
-## Fase 1 – Mapeo del flujo de imágenes y puntos de control
+### Implementación actual en Venezuela LIVE
+
+En Venezuela LIVE el control B3 está implementado combinando saneamiento **inline** en la subida de fotos de perfil y un job de migración sobre R2:
+
+- **Módulo de saneamiento de imágenes (`mediaSanitizer`)**:
+  - Archivo: `src/server/domain/media/sanitizer.ts`.
+  - Exporta `sanitizeImage(input: Uint8Array, mimeType: string)` que:
+    - Valida que el tipo MIME esté en la lista soportada (`image/jpeg`, `image/jpg`, `image/png`, `image/webp`).
+    - Usa `@mary/exif-rm` (`removeExif`) para eliminar metadatos EXIF y relacionados del binario.
+    - Devuelve `{ buffer: cleaned, mimeType }` con el mismo tipo MIME o lanza un `InternalError` si algo falla.
+- **Saneamiento inline en `POST /api/profile/photo`**:
+  - En `src/server/index.ts`, el endpoint de subida de foto de perfil:
+    - Valida tamaño máximo (2 MB) y tipos permitidos (JPG, PNG, WebP).
+    - Deriva la ruta de almacenamiento en R2: `profiles/${userId}/photo.<ext>`.
+    - Convierte el `File` recibido a `Uint8Array` (`originalBytes`).
+    - Llama a `sanitizeImage(originalBytes, mt)` para obtener un buffer libre de EXIF.
+    - Solo este buffer saneado (`cleanBuffer`) se persiste en R2, junto con el `contentType` correcto.
+- **Job de migración de fotos históricas en R2**:
+  - Ruta interna: `ALL /api/cron/profile-photos-sanitize`.
+  - Comportamiento:
+    - Lista objetos en R2 con el prefijo `profiles/` (fotos de perfil), procesando lotes de hasta 25 elementos usando `cursor` para paginación.
+    - Para cada objeto:
+      - Descarga el cuerpo, lo convierte en `Uint8Array`.
+      - Llama a `sanitizeImage` con el `contentType` almacenado.
+      - Vuelve a escribir la clave en R2 con el buffer saneado y los metadatos HTTP actualizados.
+    - Devuelve un JSON con:
+      - `processed` (número de objetos saneados en ese lote),
+      - `truncated` (si hay más objetos por procesar),
+      - `cursor` (para continuar en la siguiente invocación).
+  - Seguridad:
+    - Protegido por el mismo header `X-Cron-Secret` que el cron de reportes; en producción solo debe ser invocado por un job controlado.
+- **Servir la foto de perfil**:
+  - La ruta `GET /api/profile/photo`:
+    - Obtiene la clave asociada al usuario desde D1 (`getPhotoKeyByUserId`).
+    - Lee el objeto en R2 y lo devuelve tal cual, con headers de cache y `Content-Type`.
+    - Dado que todas las escrituras nuevas y las migradas pasan por `sanitizeImage`, las fotos que salen por esta ruta están libres de EXIF.
+- **Efecto resultante**:
+  - Las fotos de perfil nuevas nunca se almacenan con EXIF gracias al saneamiento inline.
+  - Un job de migración puede limpiar las fotos ya existentes en R2 por lotes, hasta cubrir todo el histórico.
+  - Los usuarios pueden subir imágenes sin preocuparse por filtraciones accidentales de ubicación, fecha precisa o modelo de dispositivo a través de metadatos.
+
+---
+
+## Anexo histórico – Fase 1: Mapeo del flujo de imágenes y puntos de control
 
 ### Paso 1.1 – Inventario de puntos donde se suben y sirven imágenes
 
