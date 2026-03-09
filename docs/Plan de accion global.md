@@ -14,7 +14,7 @@ El primer paso imperativo es congelar el desarrollo de nuevas funcionalidades vi
 
 A1:Se debe instituir un proceso de revisión de dependencias estáticas (utilizando comandos como npm audit o integrando motores como Dependabot en GitHub) para corregir bibliotecas preexistentes obsoletas inyectadas por los LLMs.
 
-A2: recorrer el repositorio completo mediante búsquedas de expresiones regulares (RegEx) para identificar y aislar cualquier renderizado no escapado de texto proporcionado por los usuarios (como el infame atributo dangerouslySetInnerHTML en el ecosistema React).Una vez identificados estos vectores de ataque de inyección de scripts a través del sitio (XSS), 
+A2: recorrer el repositorio completo para didentificar y aislar cualquier renderizado no escapado mediante búsquedas de expresiones regulares (RegEx) de texto proporcionado por los usuarios (como el infame atributo angerouslySetInnerHTML en el ecosistema React).Una vez identificados estos vectores de ataque de inyección de scripts a través del sitio (XSS), 
 
 A3: integrar e instanciar en toda la aplicación una biblioteca de sanitización estricta, como DOMPurify. Esto garantizará que las entradas en lenguaje de marcado de hipertexto (HTML) se despojen de cualquier etiqueta <script> maliciosa, hipervínculos ofuscados mediante esquemas javascript: o controladores de eventos anómalos antes de que el árbol DOM del navegador los interprete.
 
