@@ -1,6 +1,11 @@
 import { DependencyError } from '../errors';
 
-export async function putProfilePhotoObject(r2: R2Bucket, key: string, body: ReadableStream, contentType: string): Promise<void> {
+export async function putProfilePhotoObject(
+  r2: R2Bucket,
+  key: string,
+  body: ReadableStream | ArrayBuffer | ArrayBufferView,
+  contentType: string
+): Promise<void> {
   try {
     await r2.put(key, body, {
       httpMetadata: { contentType },

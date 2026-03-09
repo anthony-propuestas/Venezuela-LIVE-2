@@ -36,7 +36,7 @@ B2 **2. Control: Políticas de Base de Datos Rigurosas**
   * **Acción Técnica Requerida:** Desplegar reglas jerárquicas en Firestore bloqueando lecturas y escrituras globales. Implementar un modelo de Control de Acceso Basado en Roles (RBAC) validado nativamente mediante afirmaciones (claims) del token de Google.
   * **Efecto Defensivo en la Red Social:** Mitiga contundentemente la asignación masiva de permisos y restringe las fugas de bases de datos completas por raspado web indiscriminado por parte de ciber-ejércitos.
 
-**3. Control: Funciones de Saneamiento de Metadatos**
+B3 **3. Control: Funciones de Saneamiento de Metadatos**
 
   * **Acción Técnica Requerida:** Configurar y habilitar disparadores de Google Cloud Functions atados al evento `onFinalize` del Storage. Programar un servicio de backend en Python o Node.js que procese bibliotecas de imágenes (como ImageMagick o sharp).
   * **Efecto Defensivo en la Red Social:** Remueve y destruye instantáneamente todo rastro de metadatos EXIF (coordenadas geográficas, fechas exactas, y firmas de modelos de teléfonos celulares) antes de que cualquier otro usuario visualice la fotografía.

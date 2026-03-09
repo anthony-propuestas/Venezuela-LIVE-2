@@ -19,11 +19,8 @@ import {
   countProfiles,
   clearPhotoKey,
 } from './repositories/profile.repository.js';
-import {
-  deleteProfilePhotoObject,
-  getProfilePhotoObject,
-  putProfilePhotoObject,
-} from './repositories/r2.repository.js';
+import { deleteProfilePhotoObject, getProfilePhotoObject, putProfilePhotoObject } from './repositories/r2.repository.js';
+import { sanitizeImage } from './domain/media/sanitizer.js';
 
 registerGamificationListener();
 
@@ -209,7 +206,11 @@ app.post('/api/profile/photo', async (c) => {
   const ext = mt === 'image/png' ? 'png' : mt === 'image/webp' ? 'webp' : 'jpg';
   const key = `profiles/${userId}/photo.${ext}`;
 
-  await putProfilePhotoObject(r2, key, file.stream(), mt);
+  const arrayBuffer = await file.arrayBuffer();
+  const originalBytes = new Uint8Array(arrayBuffer);
+  const { buffer: cleanBuffer, mimeType } = await sanitizeImage(originalBytes, mt);
+
+  await putProfilePhotoObject(r2, key, cleanBuffer, mimeType);
   await upsertPhotoKey(db, userId, key);
 
   return c.json({ ok: true });
@@ -327,6 +328,51 @@ app.all('/api/cron/weekly-reports', async (c) => {
     console.error('Cron weekly-reports:', err);
     return c.json({ error: 'Error al ejecutar el cron' }, 500);
   }
+});
+
+/** Job de migración: sanea metadatos EXIF de fotos de perfil ya almacenadas en R2.
+ *  Controlado por el mismo secreto X-Cron-Secret que weekly-reports y procesado por lotes.
+ */
+app.all('/api/cron/profile-photos-sanitize', async (c) => {
+  const secret = c.req.header('X-Cron-Secret');
+  const devBypass = isDevBypassAllowed(c.env);
+  if (!devBypass && secret !== getCronSecret(c.env)) {
+    return c.json({ error: 'No autorizado' }, 401);
+  }
+
+  const r2 = c.env.R2_BUCKET;
+  const prefix = 'profiles/';
+  const cursor = c.req.query('cursor') ?? undefined;
+
+  const list = await r2.list({ prefix, limit: 25, cursor });
+
+  let processed = 0;
+
+  for (const obj of list.objects) {
+    try {
+      const key = obj.key;
+      const existing = await r2.get(key);
+      if (!existing || !existing.body) continue;
+
+      const mt = existing.httpMetadata?.contentType || 'image/jpeg';
+      const originalBuffer = new Uint8Array(await new Response(existing.body).arrayBuffer());
+      const { buffer: cleanBuffer, mimeType } = await sanitizeImage(originalBuffer, mt);
+
+      await r2.put(key, cleanBuffer, {
+        httpMetadata: { contentType: mimeType },
+      });
+      processed += 1;
+    } catch (err) {
+      console.error('Error al sanear foto de perfil en migración:', err);
+    }
+  }
+
+  return c.json({
+    ok: true,
+    processed,
+    truncated: list.truncated,
+    cursor: list.cursor ?? null,
+  });
 });
 
 app.get('/api/profile/photo', async (c) => {

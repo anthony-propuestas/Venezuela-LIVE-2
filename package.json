@@ -23,6 +23,7 @@
         "security:test:sanitize": "node ./scripts/test-sanitize.mjs"
     },
     "dependencies": {
+        "@mary/exif-rm": "npm:@jsr/mary__exif-rm@^0.2.2",
         "@react-oauth/google": "^0.13.4",
         "@vitejs/plugin-react": "^5.1.4",
         "dompurify": "^3.3.2",
