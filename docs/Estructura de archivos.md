@@ -174,8 +174,12 @@ En resumen: **una sola función catch-all** recibe todo el tráfico y lo resuelv
 
 ### 4.7 Autenticación y sesión en el cliente
 
-- **Almacenamiento:** clave **`venezuelaLive_auth`** en `localStorage`; se espera un objeto con al menos `credential` (token JWT de Google).
-- **Cliente API:** `api.service.js` lee ese credential y envía **`Authorization: Bearer <token>`** en todas las peticiones a la API. Si no hay credential o la API devuelve 401, se trata como sesión expirada (SESSION_EXPIRED).
+- **Almacenamiento de autenticación:** el credential de Google **solo se mantiene en memoria** mediante el módulo `src/client/auth/session.js`. No se persiste en `localStorage`, `sessionStorage` ni `IndexedDB`.
+- **Cliente API:** `api.service.js` obtiene el credential desde `@client/auth/session` y envía **`Authorization: Bearer <token>`** en todas las peticiones a la API. Si no hay credential o la API devuelve 401, se trata como sesión expirada (`SESSION_EXPIRED`).
+- **Uso de `localStorage` permitido:** se limita a datos no sensibles de UI como:
+  - `venezuelaLiveVotes`: registro de votos del usuario por propuesta.
+  - `venezuelaLiveNoteVotes`: votos sobre notas de la comunidad.
+  Estos datos no contienen tokens ni identificadores de sesión y forman parte de la allowlist de claves en `localStorage`.
 
 ---
 

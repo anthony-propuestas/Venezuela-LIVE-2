@@ -2,8 +2,7 @@ import { useState, useCallback } from 'react';
 import { GoogleLogin, useGoogleOneTapLogin } from '@react-oauth/google';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { validateCredential } from '@client/services/api.service';
-
-const AUTH_STORAGE_KEY = 'venezuelaLive_auth';
+import { setSession, clearSession, getSession } from '@client/auth/session';
 
 /** Cuando es true, la auth con Google está pausada: se muestra "Entrar (modo pruebas)" y cualquiera puede acceder. */
 export const AUTH_PAUSED = import.meta.env.VITE_GOOGLE_AUTH_PAUSED === 'true';
@@ -21,72 +20,44 @@ function decodeCredentialPayload(credential) {
   }
 }
 
-/** Guarda la sesión en localStorage. */
+/** Guarda la sesión en memoria (no se persiste en storage del navegador). */
 export function saveAuth(credential) {
   const payload = decodeCredentialPayload(credential);
   if (!payload) return;
   const expiresAt = payload.exp ? payload.exp * 1000 : Date.now() + 60 * 60 * 1000;
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
+  setSession({
     credential,
     payload: { exp: payload.exp, email: payload.email, name: payload.name, picture: payload.picture },
     expiresAt,
-  }));
+  });
 }
 
 /** Elimina la sesión guardada (cerrar sesión). */
 export function clearAuth() {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
+  clearSession();
 }
 
-/** Guarda una sesión de pruebas (solo cuando AUTH_PAUSED). Permite entrar sin Google. */
+/** Guarda una sesión de pruebas (solo cuando AUTH_PAUSED) en memoria. Permite entrar sin Google. */
 export function saveDevBypassAuth() {
   const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 h
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
+  setSession({
     credential: DEV_BYPASS_CREDENTIAL,
     payload: { email: 'pruebas@local', name: 'Usuario Pruebas', picture: null },
     expiresAt,
-  }));
+    isDevBypass: true,
+  });
 }
 
-/** Comprueba si hay sesión válida guardada. Acepta JWT de Google o sesión de bypass (modo pruebas). */
+/** Comprueba si hay sesión válida guardada en memoria. Acepta JWT de Google o sesión de bypass (modo pruebas). */
 export function getStoredAuth() {
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    const credential = data?.credential;
-    if (!credential || typeof credential !== 'string') {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      return null;
-    }
-    // Sesión de pruebas (auth pausada)
-    if (credential === DEV_BYPASS_CREDENTIAL) {
-      if (data.expiresAt && Date.now() >= data.expiresAt) {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-        return null;
-      }
-      return data;
-    }
-    // JWT de Google
-    const payload = decodeCredentialPayload(credential);
-    if (!payload) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      return null;
-    }
-    const exp = payload.exp;
-    if (exp && typeof exp === 'number' && exp * 1000 <= Date.now()) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      return null;
-    }
-    if (data.expiresAt && Date.now() >= data.expiresAt) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      return null;
-    }
-    return data;
-  } catch {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    return null;
-  }
+  const session = getSession();
+  if (!session) return null;
+  const { credential, payload, expiresAt } = session;
+  return {
+    credential,
+    payload: payload || null,
+    expiresAt: expiresAt || null,
+  };
 }
 
 /**

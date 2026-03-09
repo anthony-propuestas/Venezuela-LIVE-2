@@ -6,18 +6,18 @@
  * hace proxy de `/api/` hacia el worker. Si se define
  * `VITE_API_BASE_URL`, se usará como base (útil para previews
  * o configuraciones personalizadas).
+ *
+ * Security First / Zero Trust:
+ * - El credential se mantiene solo en memoria vía @client/auth/session.
+ * - No se lee ni se escribe en localStorage ni en sessionStorage.
  */
 
+import { getCredential as getInMemoryCredential } from '@client/auth/session';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
 const getCredential = () => {
-  try {
-    const raw = localStorage.getItem('venezuelaLive_auth');
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    return data?.credential || null;
-  } catch {
-    return null;
-  }
+  return getInMemoryCredential();
 };
 
 /**
