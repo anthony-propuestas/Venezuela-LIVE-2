@@ -1,6 +1,6 @@
 # A2: Identificar y aislar renderizado no escapado (XSS)
 
-**Estado: COMPLETADO** — Lista de tareas: [A2 todos.md](A2%20todos.md).
+**Estado: COMPLETADO** — este documento describe la auditoría de XSS **ya ejecutada**, no un plan de tareas.
 
 Documento de auditoría de seguridad — Fase 1 A2 del [Plan de acción global](Plan%20de%20accion%20global.md).
 

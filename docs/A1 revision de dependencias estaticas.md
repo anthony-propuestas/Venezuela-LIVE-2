@@ -22,76 +22,45 @@ Antes de ejecutar el plan, verificar:
 
 ---
 
-## 3. Fases del plan (paso a paso)
+## 3. Implementación en Venezuela LIVE
 
-### Fase 1: Auditoría local con npm
+Este apartado describe **cómo quedó implementado A1 en este repositorio**, más que un checklist de tareas.
 
-1. Ejecutar **`npm audit`** en modo solo informe (sin `--fix`) y capturar la salida.
-2. Clasificar y documentar las vulnerabilidades por severidad: **critical**, **high**, **moderate**, **low**.
-3. Ejecutar **`npm audit --json`** y guardar el resultado en un artefacto (por ejemplo `docs/audit-baseline.json`) para comparación posterior y trazabilidad.
-4. Interpretar la salida:
-   - Diferenciar vulnerabilidades **directas** (paquetes listados en `package.json`) de **transitivas** (dependencias de dependencias).
-   - Complementar con **`npm outdated`** para detectar paquetes obsoletos o deprecated que no aparezcan en el audit.
+- Se ejecutó una **auditoría inicial** con `npm audit` y `npm outdated` para construir la baseline de riesgos sobre el `package.json` actual.
+- Se aplicaron correcciones usando `npm audit fix` y, cuando fue necesario, actualizaciones manuales de dependencias, priorizando vulnerabilidades **critical** y **high**.
+- Tras la remediación, se volvió a ejecutar `npm audit` hasta dejar el estado actual con **0 vulnerabilidades critical/high** no aceptadas. El resultado se registró en la tabla de auditoría (sección 5).
+- Para evitar regresión, se configuró **Dependabot para npm** (archivo `.github/dependabot.yml` apuntando a la raíz `/` con frecuencia al menos `weekly`), de forma que:
+  - Las nuevas vulnerabilidades y versiones obsoletas generan PRs automáticos.
+  - La revisión humana + CI se encargan de decidir qué actualizar y cuándo.
 
-**Criterio de éxito:** Registro claro de todas las vulnerabilidades existentes y lista de paquetes a actualizar o reemplazar.
+En la práctica, A1 se traduce en un **proceso recurrente**, no en una acción puntual: cada vez que se hace un ciclo de mantenimiento o antes de un release importante, se reejecutan los comandos de auditoría y se actualiza el registro.
 
----
+## 4. Cómo repetir la auditoría en este proyecto
 
-### Fase 2: Análisis de remediación
+Para volver a evaluar el estado de dependencias en Venezuela LIVE, basta con:
 
-1. Para cada vulnerabilidad reportada por `npm audit`:
-   - Decidir si aplicar **`npm audit fix`** (actualizaciones automáticas dentro del rango semántico permitido),
-   - **`npm audit fix --force`** (puede introducir cambios de versión major; **no usar sin revisar changelog y suite de pruebas**), o
-   - **Actualización manual** (cambiar versión en `package.json` y ejecutar `npm install`).
-2. Priorizar: abordar primero **critical** y **high**; dejar **moderate** y **low** para un segundo ciclo si es necesario.
-3. Para dependencias obsoletas o deprecated (p. ej. detectadas con `npm outdated` o avisos en `npm install`): planificar **reemplazo** por paquete mantenido o **actualización** a la última versión compatible.
-4. Elaborar una **matriz de acciones**: por cada dependencia afectada, anotar la acción (actualizar / reemplazar / aceptar riesgo documentado) y la justificación breve.
+1. Ejecutar en la raíz del proyecto:
 
-**Criterio de éxito:** Matriz de acciones definida para cada dependencia afectada, sin vulnerabilidades critical/high sin plan de remediación.
+   ```bash
+   npm audit
+   npm outdated
+   ```
 
----
+2. Revisar el informe de `npm audit`:
+   - Si aparecen vulnerabilidades **critical/high**, aplicar `npm audit fix` y/o actualizar manualmente las dependencias afectadas.
+   - Volver a ejecutar `npm audit` hasta que no queden vulnerabilidades critical/high o queden únicamente las que se hayan decidido aceptar explícitamente.
 
-### Fase 3: Aplicación segura de correcciones
+3. Completar el **registro de auditoría** en este archivo (sección 5) con la fecha, responsable, resultado de `npm audit` y un resumen de acciones (por ejemplo: “actualizado hono a X.Y.Z; 0 critical/high posteriores al fix”).
 
-1. Crear una **rama dedicada** (por ejemplo `fix/deps-a1`) desde la rama principal.
-2. Aplicar correcciones en este orden:
-   - Primero **`npm audit fix`** (sin `--force` salvo análisis explícito).
-   - Luego actualizaciones manuales de versiones según la matriz de la Fase 2.
-3. Ejecutar **build** y **pruebas** del proyecto:
-   - `npm run build`
-   - Si existen tests (p. ej. `npm run check:apis` u otros definidos en `package.json`), ejecutarlos y asegurar que pasen.
-4. Revisar los cambios en el lockfile y en `package.json`; realizar un **commit atómico** con mensaje que referencie A1 (por ejemplo: `fix(deps): A1 - remediación de vulnerabilidades y dependencias obsoletas`).
-5. Volver a ejecutar **`npm audit`** y verificar que no queden vulnerabilidades critical ni high (o documentar excepciones aceptadas con justificación).
+4. Ejecutar al menos:
 
-**Criterio de éxito:** `npm audit` sin vulnerabilidades critical/high no aceptadas; build y pruebas en verde; cambios contenidos en una rama lista para merge tras revisión.
+   ```bash
+   npm run build
+   ```
 
----
+   para asegurarse de que la actualización de dependencias no rompe el build.
 
-### Fase 4: Automatización con Dependabot (GitHub)
-
-1. Crear el archivo **`.github/dependabot.yml`** con:
-   - Configuración para el ecosistema **npm**.
-   - Directorio raíz: `/`.
-   - Frecuencia de revisión (por ejemplo **weekly**).
-   - Opcional: agrupación de actualizaciones de versión minor/patch para reducir ruido en PRs.
-2. En el repositorio de GitHub: habilitar **Dependabot alerts** (Settings > Security > Dependabot alerts).
-3. Definir **política de revisión**: revisar los PRs abiertos por Dependabot en una ventana definida (p. ej. semanal); hacer merge solo tras **CI en verde** y **revisión humana** del diff de dependencias.
-
-**Criterio de éxito:** Configuración de Dependabot activa; al menos un ciclo de revisión (primer PR de Dependabot recibido y proceso de revisión documentado o aplicado).
-
----
-
-### Fase 5: Proceso recurrente y criterios de cierre
-
-1. Establecer una **cadencia** para la revisión de dependencias (por ejemplo: cada sprint, o antes de cada release).
-2. Incluir en el **checklist** de desarrollo o release:
-   - Ejecución de `npm audit`.
-   - Revisión de `npm outdated`.
-   - Revisión de Dependabot alerts y PRs pendientes.
-3. **Criterios de cierre de A1:**
-   - (1) Cero vulnerabilidades **critical** y **high** no aceptadas (con excepciones documentadas si aplica).
-   - (2) Dependabot configurado y al menos un ciclo de revisión realizado.
-   - (3) Este documento actualizado con la **fecha de última auditoría** y el **resultado de `npm audit`** (por ejemplo: "X vulnerabilidades low, 0 critical/high").
+GitHub y Dependabot se encargan de mantener una vigilancia continua; este flujo solo documenta cómo se ejecuta localmente la misma lógica de A1 cuando se quiere forzar un ciclo de revisión manual.
 
 ---
 

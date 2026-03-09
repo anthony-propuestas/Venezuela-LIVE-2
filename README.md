@@ -9,6 +9,7 @@ Aplicación web desplegada en **Cloudflare Pages** (assets estáticos + Pages Fu
 - [Stack tecnológico](#stack-tecnológico)
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Funcionalidades](#funcionalidades)
+- [Seguridad (Fase 1)](#seguridad-fase-1)
 - [API](#api)
 - [Base de datos y migraciones](#base-de-datos-y-migraciones)
 - [Desarrollo local](#desarrollo-local)
@@ -89,6 +90,59 @@ Aplicación web desplegada en **Cloudflare Pages** (assets estáticos + Pages Fu
 - **Freemium y rate limiting**: usuarios no premium tienen límites diarios (likes, comentarios, propuestas); el frontend puede consumir cuota con `POST /api/actions/consume`. Usuarios premium no están limitados.
 - **Premium**: estado `isPremium` en perfil; tickets de pago (referencia, fecha, monto) para solicitar activación; alias de pago mostrado en la app (configurable por variable de entorno).
 - **Reportes semanales**: tres reportes PDF (consenso, rechazo, conflicto) generados por un job que puede ejecutarse vía cron HTTP; también descarga bajo demanda si no existe en R2.
+
+---
+
+## Seguridad (Fase 1)
+
+La **Fase 1 del Plan de acción global** se centra en reducir superficie de ataque y mitigar riesgos de XSS y vulnerabilidades conocidas en dependencias. En Venezuela LIVE esta fase está **implementada** y documentada en:
+
+- `docs/A1 revision de dependencias estaticas.md`
+- `docs/A2 renderizado no escapado.md`
+- `docs/A3 plan integracion DOMPurify sanitizacion.md`
+
+### A1 – Revisión de dependencias estáticas (npm)
+
+- Se ejecutó una **auditoría de dependencias** con `npm audit` y `npm outdated`, corrigiendo vulnerabilidades reportadas (incluida una de severidad alta en `hono`) hasta dejar el estado actual con **0 vulnerabilidades critical/high** tras la remediación.
+- Se dejó registrada una baseline en la tabla de auditoría de `docs/A1 revision de dependencias estaticas.md` (incluyendo la fecha y el resultado del último `npm audit`).
+- En GitHub se configuró **Dependabot para npm**, de forma que las futuras actualizaciones de seguridad y versiones obsoletas generen PRs automáticos y alertas.
+
+Comandos útiles:
+
+- `npm audit` — estado de vulnerabilidades conocidas.
+- `npm outdated` — dependencias desactualizadas.
+
+### A2 – Renderizado no escapado (XSS)
+
+- Se realizó una **auditoría de renderizado** buscando patrones de riesgo típicos de XSS: `dangerouslySetInnerHTML`, asignaciones a `.innerHTML`, `document.write`, `insertAdjacentHTML`, `createContextualFragment`, `.html()`, atributos con `javascript:` / `data:text/html`, etc.
+- El análisis, ejecutado con `rg` (ripgrep) sobre `src/client`, `src/server`, `functions` e `index.html`, confirmó que:
+  - El frontend React solo renderiza datos de usuario mediante **interpolación JSX escapada** (`{variable}`), sin usar HTML crudo.
+  - El servidor devuelve JSON y no inyecta HTML en el DOM del cliente.
+  - No hay uso de APIs DOM peligrosas ni de `dangerouslySetInnerHTML` en código ejecutable.
+- Resultado: **0 hallazgos críticos/altos** de XSS por renderizado no escapado. El detalle está en `docs/A2 renderizado no escapado.md`.
+
+### A3 – Sanitización estricta con DOMPurify
+
+Aunque hoy no se renderiza HTML crudo, se dejó lista una defensa fuerte para cualquier uso futuro de HTML enriquecido:
+
+- Se añadió **DOMPurify** al proyecto:
+  - Dependencias: `dompurify` y `@types/dompurify` en `package.json`.
+- Se creó un **módulo central de sanitización**:
+  - `src/client/utils/sanitize.js` expone `sanitizeHtml(dirty)`, que aplica DOMPurify con configuración estricta (`FORBID_TAGS` incluyendo `script`, `iframe`, `object`, `embed`, `form`, etc.).
+- Se creó un **componente React seguro**:
+  - `src/client/components/SafeHtml.jsx` renderiza `<Tag dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />`.
+  - La política es que **cualquier HTML de usuario/terceros** que se quiera mostrar debe pasar por este componente (o por `sanitizeHtml`).
+- Se añadió un **self-test automatizado de sanitización**:
+  - Script: `scripts/test-sanitize.mjs` usando `jsdom` + DOMPurify.
+  - Verifica que se eliminan `<script>`, enlaces `javascript:...` y atributos como `onerror`.
+  - Script npm: `"security:test:sanitize": "node ./scripts/test-sanitize.mjs"`.
+
+Comandos de verificación:
+
+- `npm run security:test:sanitize` — comprueba que DOMPurify bloquea payloads XSS típicos.
+- `npm run build` — build de la app con la integración de DOMPurify activa.
+
+Con A1, A2 y A3 implementados, la Fase 1 de hardening descrita en el `Plan de accion global` está completada para este repositorio.
 
 ---
 

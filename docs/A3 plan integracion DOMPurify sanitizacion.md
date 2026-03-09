@@ -1,6 +1,6 @@
 # A3: Integración de biblioteca de sanitización (DOMPurify)
 
-**Estado:** Plan de implementación — Fase 1 A3 del [Plan de acción global](Plan%20de%20accion%20global.md).
+**Estado:** Implementado — Fase 1 A3 del [Plan de acción global](Plan%20de%20accion%20global.md), con DOMPurify integrado en el cliente React.
 
 **Objetivo:** Instalar e instanciar en toda la aplicación una biblioteca de sanitización estricta (DOMPurify) para garantizar que cualquier HTML introducido en el futuro —o cualquier punto que renderice marcado— quede libre de etiquetas `<script>`, esquemas `javascript:`, controladores de eventos y contenido ofuscado antes de que el árbol DOM lo interprete.
 
@@ -19,9 +19,9 @@
 
 ---
 
-## 2. Plan paso a paso
+## 2. Implementación de la sanitización
 
-### Paso 1: Instalar DOMPurify
+### 2.1 Dependencias instaladas (DOMPurify)
 
 Desde la raíz del proyecto:
 
@@ -37,7 +37,7 @@ npm install -D @types/dompurify
 
 ---
 
-### Paso 2: Crear un módulo de sanitización centralizado
+### 2.2 Módulo de sanitización centralizado
 
 Objetivo: un único punto de configuración y uso para toda la app.
 
@@ -60,7 +60,7 @@ Objetivo: un único punto de configuración y uso para toda la app.
 
 ---
 
-### Paso 3: (Opcional) Componente React “SafeHtml”
+### 2.3 Componente React “SafeHtml”
 
 Para homogeneizar el uso y evitar olvidos:
 
@@ -73,7 +73,7 @@ Para homogeneizar el uso y evitar olvidos:
 
 ---
 
-### Paso 4: Política de uso y puntos de aplicación
+### 2.4 Política de uso y puntos de aplicación
 
 - **Hoy:** No hay sitios que requieran cambio inmediato (A2 no encontró `dangerouslySetInnerHTML`).
 - **Futuro:** Cualquier feature que renderice HTML de usuario o de terceros (rich text, markdown convertido a HTML, fragmentos de noticias externas, etc.) debe:
@@ -83,7 +83,7 @@ Para homogeneizar el uso y evitar olvidos:
 
 ---
 
-### Paso 5: Configuración recomendada de DOMPurify
+### 2.5 Configuración recomendada de DOMPurify
 
 En el módulo `sanitize` (Paso 2), usar opciones estrictas, por ejemplo:
 
@@ -96,7 +96,7 @@ Documentar en comentarios del módulo la decisión: “solo contenido de present
 
 ---
 
-### Paso 6: Pruebas y revisión
+### 2.6 Pruebas y revisión
 
 - Añadir al menos una prueba (manual o automatizada) que verifique que:
   - Un string con `<script>alert(1)</script>` sanitizado no ejecuta script y no contiene la etiqueta en el resultado.
@@ -105,7 +105,7 @@ Documentar en comentarios del módulo la decisión: “solo contenido de present
 
 ---
 
-### Paso 7: Documentación y checklist de cierre A3
+### 2.7 Documentación y checklist de cierre A3
 
 - Actualizar este documento con el estado “Implementado” y la ruta real del módulo (p. ej. `src/client/utils/sanitize.js`).
 - En el [Plan de acción global](Plan%20de%20accion%20global.md), marcar A3 como completado cuando se cumplan todos los pasos.
