@@ -76,14 +76,18 @@ export async function enqueueAction(type, payload) {
 }
 
 /**
- * Obtiene todas las acciones pendientes.
+ * Obtiene las acciones pendientes (excluye abandonadas para evitar bucles infinitos).
  */
 export async function getPendingActions() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_ACTIONS, 'readonly');
     const req = tx.objectStore(STORE_ACTIONS).index('createdAt').getAll();
-    req.onsuccess = () => resolve(req.result || []);
+    req.onsuccess = () => {
+      const all = req.result || [];
+      const pending = all.filter((a) => a.status !== 'abandoned');
+      resolve(pending);
+    };
     req.onerror = () => reject(req.error);
   });
 }
@@ -103,26 +107,35 @@ export async function markAsSynced(id) {
 
 /**
  * Marca una acción como fallida (para reintentos).
- * Si supera MAX_RETRIES, la elimina para evitar bucles infinitos.
+ * Si supera MAX_RETRIES o isPermanent, la marca como abandonada (se preserva, no se borra).
+ * @param {string} id
+ * @param {string} error
+ * @param {boolean} [isPermanent] - true si el error es permanente (ej. 404)
+ * @returns {Promise<{abandoned: boolean}>}
  */
-export async function markAsFailed(id, error) {
+export async function markAsFailed(id, error, isPermanent = false) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_ACTIONS, 'readwrite');
     const req = tx.objectStore(STORE_ACTIONS).get(id);
     req.onsuccess = () => {
       const action = req.result;
+      let abandoned = false;
       if (action) {
         const retryCount = (action.retryCount || 0) + 1;
-        if (retryCount >= MAX_RETRIES) {
-          tx.objectStore(STORE_ACTIONS).delete(id);
+        if (isPermanent || retryCount >= MAX_RETRIES) {
+          action.status = 'abandoned';
+          action.lastError = String(error).slice(0, 200);
+          action.abandonedAt = Date.now();
+          tx.objectStore(STORE_ACTIONS).put(action);
+          abandoned = true;
         } else {
           action.retryCount = retryCount;
           action.lastError = String(error).slice(0, 200);
           tx.objectStore(STORE_ACTIONS).put(action);
         }
       }
-      resolve();
+      resolve({ abandoned });
     };
     req.onerror = () => reject(req.error);
   });
@@ -134,4 +147,20 @@ export async function markAsFailed(id, error) {
 export async function getPendingCount() {
   const actions = await getPendingActions();
   return actions.length;
+}
+
+/**
+ * Cuenta de acciones abandonadas (no sincronizadas tras reintentos).
+ */
+export async function getAbandonedCount() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_ACTIONS, 'readonly');
+    const req = tx.objectStore(STORE_ACTIONS).index('createdAt').getAll();
+    req.onsuccess = () => {
+      const abandoned = (req.result || []).filter((a) => a.status === 'abandoned');
+      resolve(abandoned.length);
+    };
+    req.onerror = () => reject(req.error);
+  });
 }

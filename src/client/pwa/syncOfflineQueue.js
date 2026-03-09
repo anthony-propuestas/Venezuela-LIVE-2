@@ -51,13 +51,20 @@ async function syncAction(action, credential) {
   return false;
 }
 
+/** Solo fallo permanente cuando el mensaje es el fallback controlado "Error 404", no un body que contenga "404". */
+function isPermanentFailure(err) {
+  const msg = String(err?.message ?? '').trim();
+  return msg === 'Error 404';
+}
+
 export async function syncOfflineQueue() {
   const credential = getCredential?.();
-  if (!credential) return { synced: 0, failed: 0 };
+  if (!credential) return { synced: 0, failed: 0, abandoned: 0 };
 
   const actions = await getPendingActions();
   let synced = 0;
   let failed = 0;
+  let abandoned = 0;
 
   for (const action of actions) {
     try {
@@ -67,12 +74,14 @@ export async function syncOfflineQueue() {
         synced++;
       }
     } catch (err) {
-      await markAsFailed(action.id, err.message);
+      const permanent = isPermanentFailure(err);
+      const { abandoned: a } = await markAsFailed(action.id, err.message, permanent);
+      if (a) abandoned++;
       failed++;
     }
   }
 
-  return { synced, failed };
+  return { synced, failed, abandoned };
 }
 
 /**
