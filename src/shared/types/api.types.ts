@@ -3,7 +3,12 @@
  */
 
 /** Usuario autenticado (JWT o bypass dev). */
-export type User = { userId: string; email: string; name: string };
+export type User = {
+  userId: string;
+  email: string;
+  name: string;
+  role: 'user' | 'moderator' | 'admin';
+};
 
 /** Cuerpo de PUT /api/profile */
 export interface ProfileUpdateBody {

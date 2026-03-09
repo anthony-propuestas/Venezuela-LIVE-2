@@ -181,6 +181,24 @@ En resumen: **una sola función catch-all** recibe todo el tráfico y lo resuelv
   - `venezuelaLiveNoteVotes`: votos sobre notas de la comunidad.
   Estos datos no contienen tokens ni identificadores de sesión y forman parte de la allowlist de claves en `localStorage`.
 
+### 4.8 Migraciones y esquema de `profiles` (actualizado)
+
+- **Migraciones en `migrations/`**:
+  - `0001_create_profiles.sql`
+  - `0002_add_username.sql`
+  - `0003_create_proposals_schema.sql`
+  - `0004_seed_proposals.sql`
+  - `0005_create_achievements.sql`
+  - `0006_create_user_achievements.sql`
+  - `0007_add_gamification_to_profiles.sql`
+  - `0008_add_is_premium_and_payment_tickets.sql`
+  - `0009_add_unique_email_and_payment_reference.sql`
+  - `0010_add_role_to_profiles.sql` (añade columna `role` en `profiles`).
+
+- **Columna `role` en `profiles`**:
+  - Tipo: `TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'moderator', 'admin'))`.
+  - Uso: fuente de verdad para RBAC en el middleware de autenticación (`auth.middleware.ts`), que inyecta en el contexto del request un `User` con `{ userId, email, name, role }`.
+
 ---
 
 ## 5. Build y despliegue
@@ -204,7 +222,7 @@ Los assets estáticos y la función catch-all viven juntos en `dist/`; Pages sir
 | **Páginas UI** | Estado `currentPage` en `App.jsx`; constantes `VALID_PAGES`; archivos `*.page.jsx` en `pages/<Nombre>/`. |
 | **Módulos** | Alias `@client`, `@server`, `@shared` (Vite + jsconfig). |
 | **Capas del servidor** | Nombres de archivo: `.middleware.ts`, `.repository.ts`; dominio en `domain/<nombre>/` con controllers/service/dataLayer según el caso. |
-| **Migraciones** | `migrations/NNNN_descripcion.sql`. |
+| **Migraciones** | `migrations/NNNN_descripcion.sql` (incluye `0010_add_role_to_profiles.sql`). |
 | **Errores** | `ErrorCode` + clases `DomainError` y subclases; respuestas JSON con `error`, `message`, opcional `fieldErrors` y `detail`. |
 | **Contratos client/server** | Tipos en `src/shared/types/`; constantes en `src/shared/constants.ts`. |
 | **Entrada HTTP** | Una sola Pages Function catch-all `[[path]]` que delega en la app Hono; Hono enruta por path y sirve assets con ASSETS en el fallback. |

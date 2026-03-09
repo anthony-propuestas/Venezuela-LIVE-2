@@ -11,6 +11,7 @@ const DEV_BYPASS_USER: User = {
   userId: 'dev-bypass-user',
   email: 'pruebas@local',
   name: 'Usuario Pruebas',
+  role: 'user',
 };
 
 type AppBindings = { Bindings: Env; Variables: { user: User } };
@@ -39,7 +40,24 @@ export async function verifyAuth(c: Context<AppBindings>): Promise<User | null> 
     const userId = payload.sub as string;
     const email = (payload.email as string) || '';
     const name = (payload.name as string) || '';
-    return { userId, email, name };
+
+    // Intentar obtener el rol desde la base de datos (profiles.role).
+    let role: User['role'] = 'user';
+    try {
+      const row = await c.env.DB
+        .prepare('SELECT role FROM profiles WHERE user_id = ?')
+        .bind(userId)
+        .first<{ role?: string }>();
+      const rawRole = typeof row?.role === 'string' ? row.role : null;
+      if (rawRole === 'moderator' || rawRole === 'admin' || rawRole === 'user') {
+        role = rawRole;
+      }
+    } catch {
+      // Si la tabla/columna no existe o hay error, degradar de forma segura a rol "user".
+      role = 'user';
+    }
+
+    return { userId, email, name, role };
   } catch {
     return null;
   }

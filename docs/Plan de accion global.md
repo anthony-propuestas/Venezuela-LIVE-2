@@ -22,18 +22,16 @@ Fase 2: Fortalecimiento Estructural de la Autenticación y Persistencia (Días 6
 
 La estrategia de seguridad del cliente y del lado del servidor gestionado debe reescribirse aplicando el principio de privilegios mínimos y arquitecturas Zero-Trust.
 
-A continuación, se presenta el contenido de la tabla en un formato de texto plano y estructurado, manteniendo la conexión entre el Control de Seguridad, la Acción Técnica y su Efecto Defensivo asociado:
-
 -----
 
 ### Controles de Seguridad para la Red Social
 
-**1. Control: Erradicación de Tokens Locales**
+B1:**1. Control: Erradicación de Tokens Locales**
 
   * **Acción Técnica Requerida:** Refactorizar el módulo de Firebase Auth y los Hooks de estado para prevenir el almacenamiento de identificadores de sesión o JWTs en `localStorage` o `sessionStorage`.
   * **Efecto Defensivo en la Red Social:** Inmuniza el control de cuentas frente a exfiltraciones por ataques XSS persistentes que logren evadir la sanitización principal.
 
-**2. Control: Políticas de Base de Datos Rigurosas**
+B2 **2. Control: Políticas de Base de Datos Rigurosas**
 
   * **Acción Técnica Requerida:** Desplegar reglas jerárquicas en Firestore bloqueando lecturas y escrituras globales. Implementar un modelo de Control de Acceso Basado en Roles (RBAC) validado nativamente mediante afirmaciones (claims) del token de Google.
   * **Efecto Defensivo en la Red Social:** Mitiga contundentemente la asignación masiva de permisos y restringe las fugas de bases de datos completas por raspado web indiscriminado por parte de ciber-ejércitos.
@@ -46,6 +44,7 @@ A continuación, se presenta el contenido de la tabla en un formato de texto pla
 Fase 3: Postura Antivigilancia y Despliegue de Contra-Censura (Días 13-20)
 
 El último estrato defensivo aborda las contramedidas a nivel de red frente a la censura dictada por las telecomunicaciones venezolanas y entes gubernamentales. Se debe configurar el escudo perimetral del dominio a través de las capacidades empresariales de Cloudflare. Esto implica la habilitación de un Web Application Firewall (WAF) con reglas gestionadas estrictas y limitación de la tasa de peticiones (Rate Limiting) para impedir el rastreo automatizado.
+
 Para la evasión de la censura (bloqueo de DNS), la arquitectura debe evolucionar de un alojamiento en el dominio raíz (.pages.dev) hacia la utilización sistemática de dominios espejo rotativos generados algorítmicamente. Si las limitaciones técnicas impiden técnicas avanzadas como el "Domain Fronting", la red social debe mantener una lista distribuida externamente (por ejemplo, a través de canales cifrados como Signal o Telegram) que redirija continuamente el tráfico del lado del cliente a subdominios nuevos si el dominio primario es estrangulado por la inspección profunda de paquetes (DPI). Finalmente, implementar políticas de seguridad de contenido HTTP (CSP Header) herméticas que instruyan a los navegadores modernos a negarse absolutamente a conectarse a dominios externos no verificados, sellando la aplicación contra el secuestro de la red subyacente.
 
 Mejoras de Usabilidad (UX/UI): Plan de Acción para Inclusión Tecnológica

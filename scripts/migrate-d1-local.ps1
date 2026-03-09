@@ -46,7 +46,8 @@ $migrations = @(
     "./migrations/0006_create_user_achievements.sql",
     "./migrations/0007_add_gamification_to_profiles.sql",
     "./migrations/0008_add_is_premium_and_payment_tickets.sql",
-    "./migrations/0009_add_unique_email_and_payment_reference.sql"
+    "./migrations/0009_add_unique_email_and_payment_reference.sql",
+    "./migrations/0010_add_role_to_profiles.sql"
 )
 
 foreach ($m in $migrations) {
