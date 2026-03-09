@@ -66,6 +66,14 @@ La atención visual y el rendimiento psicológico de un usuario operando bajo el
 
 A continuación, se presenta el contenido de la tabla en un formato de texto plano y estructurado, manteniendo la conexión entre el Control de Seguridad, la Acción Técnica y su Efecto Defensivo asociado:
 
+| Área de Interfaz de Usuario | Intervención Arquitectónica Específica | Impacto Ergonómico en el Ciudadano Venezolano |
+| :--- | :--- | :--- |
+
+ Gestión Activa de Carga (Retroalimentación) | Reemplazar todos los íconos de carga circulares genéricos (spinners) por Skeleton Screens detalladas de las publicaciones faltantes, complementadas con Lógica de Actualización Optimista. | Reduce dramáticamente la percepción temporal de latencia del sistema, disipando la frustración psicológica en conexiones degradas de 3G y HSPA+. |
+
+| Optimización Severa de Medios | Implantar protocolos de compresión de próxima generación (WebP o AVIF) para todo recurso de imagen desde el servidor perimetral, acoplados a directivas de Carga Diferida (Lazy Loading) estricta en el árbol de componentes. | Mantiene el consumo del exiguo saldo de datos celulares móviles a mínimos marginales, garantizando que una revisión del flujo de noticias no represente un gasto económico inasumible. |
+
+| Accesibilidad Lumínica | Integrar un Modo Oscuro absoluto basado en códigos hexadecimales de negro puro (OLED Black, #000000) en lugar de tonos grises o azulados corporativos, obedeciendo las consultas de medios CSS prefers-color-scheme. | Evita la iluminación innecesaria de píxeles, logrando una conservación máxima y crítica de las baterías de teléfonos inteligentes ante cortes rotativos de electricidad generalizados. |
 
 Fase 4: Institucionalización del Sistema de Diseño y Abstracción Visual (Días 16-21)
 

@@ -10,6 +10,8 @@ const STORE_CACHE = 'cachedEntities';
 
 const ACTION_TYPES = ['create_proposal', 'add_comment', 'add_note'];
 const MAX_PAYLOAD_LENGTH = 5000;
+/** Reintentos antes de abandonar una acción (evita bucle infinito cuando el backend no existe). */
+const MAX_RETRIES = 3;
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -101,6 +103,7 @@ export async function markAsSynced(id) {
 
 /**
  * Marca una acción como fallida (para reintentos).
+ * Si supera MAX_RETRIES, la elimina para evitar bucles infinitos.
  */
 export async function markAsFailed(id, error) {
   const db = await openDB();
@@ -110,9 +113,14 @@ export async function markAsFailed(id, error) {
     req.onsuccess = () => {
       const action = req.result;
       if (action) {
-        action.retryCount = (action.retryCount || 0) + 1;
-        action.lastError = String(error).slice(0, 200);
-        tx.objectStore(STORE_ACTIONS).put(action);
+        const retryCount = (action.retryCount || 0) + 1;
+        if (retryCount >= MAX_RETRIES) {
+          tx.objectStore(STORE_ACTIONS).delete(id);
+        } else {
+          action.retryCount = retryCount;
+          action.lastError = String(error).slice(0, 200);
+          tx.objectStore(STORE_ACTIONS).put(action);
+        }
       }
       resolve();
     };

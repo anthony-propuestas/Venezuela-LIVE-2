@@ -25,7 +25,6 @@ async function syncAction(action, credential) {
       body: JSON.stringify(action.payload),
     });
     if (res.ok) return true;
-    if (res.status === 404) return true; // Backend no implementado aún
     throw new Error(await res.text().catch(() => `Error ${res.status}`));
   }
 
@@ -36,7 +35,6 @@ async function syncAction(action, credential) {
       body: JSON.stringify(action.payload),
     });
     if (res.ok) return true;
-    if (res.status === 404) return true;
     throw new Error(await res.text().catch(() => `Error ${res.status}`));
   }
 
@@ -47,7 +45,6 @@ async function syncAction(action, credential) {
       body: JSON.stringify(action.payload),
     });
     if (res.ok) return true;
-    if (res.status === 404) return true;
     throw new Error(await res.text().catch(() => `Error ${res.status}`));
   }
 
