@@ -4,6 +4,7 @@
 
 import type { Context } from 'hono';
 import { runWeeklyReportJob, generateReportOnDemand, type ReportType } from './service';
+import type { Env, User } from '../types';
 
 const R2_PREFIX = 'reports/weekly';
 const FILENAMES: Record<ReportType, string> = {
@@ -12,8 +13,10 @@ const FILENAMES: Record<ReportType, string> = {
   volume: 'reporte-conflicto.pdf',
 };
 
+type AppBindings = { Bindings: Env; Variables: { user: User } };
+
 export async function handleGetReport(
-  c: Context<{ Bindings: { DB: D1Database; R2_BUCKET: R2Bucket } }>,
+  c: Context<AppBindings>,
   type: ReportType
 ): Promise<Response> {
   try {

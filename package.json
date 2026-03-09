@@ -6,8 +6,8 @@
     "main": "index.js",
     "scripts": {
         "dev": "vite",
-        "build": "vite build && node scripts/build-pages-functions.mjs",
-        "dev:pages": "vite build && wrangler pages dev dist --persist-to=%LOCALAPPDATA%\\venezuela-live-wrangler",
+        "build": "vite build && node scripts/inject-precache.mjs && node scripts/build-pages-functions.mjs",
+        "dev:pages": "vite build && node scripts/inject-precache.mjs && wrangler pages dev dist --persist-to=%LOCALAPPDATA%\\venezuela-live-wrangler",
         "dev:worker": "wrangler pages dev dist --persist-to=%LOCALAPPDATA%\\venezuela-live-wrangler --port 8787",
         "deploy": "npm run build && wrangler pages deploy dist --project-name=venezuela-live-2",
         "db:migrate:local": "wrangler d1 execute venezuela-live-db --local --file=./migrations/0001_create_profiles.sql",

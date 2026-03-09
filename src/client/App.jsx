@@ -2,6 +2,8 @@ import Login, { LoginBypass, getStoredAuth, clearAuth, AUTH_PAUSED } from '@clie
 import Profile from '@client/pages/Profile/Profile.page';
 import { useError } from '@client/context/ErrorContext';
 import * as api from '@client/services/api.service';
+import { enqueueAction } from '@client/pwa/offlineQueue';
+import { registerBackgroundSync } from '@client/pwa/syncOfflineQueue';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   ThumbsUp, 
@@ -320,6 +322,15 @@ export default function App() {
     e.preventDefault();
     if (!newTopicName || !newProposalTitle || !newProposalDesc || !newProposalAuthor) return;
 
+    const payload = {
+      category: newTopicCategory,
+      subcategory: newTopicSubcategory,
+      topic: newTopicName,
+      title: newProposalTitle,
+      description: newProposalDesc,
+      author: newProposalAuthor,
+    };
+
     try {
       const result = await api.consumeAction('proposals');
       if (!result.ok) {
@@ -328,8 +339,18 @@ export default function App() {
       }
     } catch (err) {
       if (handleAccessDenied(err)) return;
-      addError?.('No se pudo crear la propuesta. Intenta de nuevo.');
-      return;
+      if (!navigator.onLine) {
+        try {
+          await enqueueAction('create_proposal', payload);
+          registerBackgroundSync();
+        } catch (qErr) {
+          addError?.('No se pudo guardar. Intenta cuando vuelva la conexión.');
+          return;
+        }
+      } else {
+        addError?.('No se pudo crear la propuesta. Intenta de nuevo.');
+        return;
+      }
     }
 
     const newThread = {
@@ -361,6 +382,7 @@ export default function App() {
   };
 
   const handleAddComment = async (threadId, proposalId, text, position) => {
+    const payload = { threadId, proposalId, text, position };
     try {
       const result = await api.consumeAction('comments');
       if (!result.ok) {
@@ -369,8 +391,18 @@ export default function App() {
       }
     } catch (err) {
       if (handleAccessDenied(err)) return false;
-      addError?.('No se pudo publicar el comentario. Intenta de nuevo.');
-      return false;
+      if (!navigator.onLine) {
+        try {
+          await enqueueAction('add_comment', payload);
+          registerBackgroundSync();
+        } catch (qErr) {
+          addError?.('No se pudo guardar. Intenta cuando vuelva la conexión.');
+          return false;
+        }
+      } else {
+        addError?.('No se pudo publicar el comentario. Intenta de nuevo.');
+        return false;
+      }
     }
     setThreads(prevThreads => prevThreads.map(thread => {
       if (thread.id !== threadId) return thread;
@@ -483,7 +515,7 @@ export default function App() {
   };
 
   // Agregar nueva nota de la comunidad
-  const handleAddNote = (threadId, proposalId, text) => {
+  const handleAddNote = async (threadId, proposalId, text) => {
     if (!text.trim()) return;
     
     const newNote = {
@@ -493,6 +525,16 @@ export default function App() {
       downvotes: 0,
       netScore: 0
     };
+
+    if (!navigator.onLine) {
+      try {
+        await enqueueAction('add_note', { threadId, proposalId, text: text.trim() });
+        registerBackgroundSync();
+      } catch (qErr) {
+        addError?.('No se pudo guardar. Intenta cuando vuelva la conexión.');
+        return;
+      }
+    }
 
     setThreads(prevThreads => prevThreads.map(thread => {
       if (thread.id !== threadId) return thread;

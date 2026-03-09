@@ -35,7 +35,9 @@ if ($portInUse) {
 Set-Location $ProjectRoot
 Write-Host "Usando persistencia en: $PersistPath" -ForegroundColor Cyan
 Write-Host "Ejecutando migraciones D1 locales..." -ForegroundColor Cyan
-$ErrorActionPreference = "Stop"
+# Permitir que comandos nativos (npx/wrangler) devuelvan errores sin detener todo el script,
+# para poder inspeccionar la salida y manejar casos esperados como la columna username duplicada.
+$ErrorActionPreference = "Continue"
 
 $migrations = @(
     "./migrations/0001_create_profiles.sql",
@@ -52,8 +54,19 @@ $migrations = @(
 
 foreach ($m in $migrations) {
     if (Test-Path $m) {
-        npx wrangler d1 execute venezuela-live-db --local --persist-to=$PersistPath --file=$m
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $output = npx wrangler d1 execute venezuela-live-db --local --persist-to=$PersistPath --file=$m 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            # Caso especial: la migracion 0002 puede fallar con "duplicate column name: username"
+            # cuando ya se aplico previamente sobre esta base local. En ese caso, continuamos.
+            if ($m -like "*0002_add_username.sql" -and ($output -match "duplicate column name: username")) {
+                Write-Host "Aviso: la columna 'username' ya existe en la base local. Se omite este error y se continua." -ForegroundColor Yellow
+                continue
+            }
+
+            Write-Host "Error al ejecutar migracion $m" -ForegroundColor Red
+            Write-Host $output
+            exit $LASTEXITCODE
+        }
     }
 }
 

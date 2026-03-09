@@ -33,6 +33,34 @@ type AppBindings = { Bindings: Env; Variables: { user: User } };
 
 const app = new Hono<AppBindings>();
 
+const SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self' https://accounts.google.com",
+    "worker-src 'self'",
+    "connect-src 'self' https://accounts.google.com https://www.googleapis.com",
+    "img-src 'self' data: blob: https://flagcdn.com",
+    "style-src 'self' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "frame-src 'self' https://accounts.google.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; '),
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+};
+
+app.use('*', async (c, next) => {
+  await next();
+  const res = c.res;
+  if (!res) return;
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    res.headers.set(key, value);
+  }
+});
+
 app.use('/api/*', createAuthMiddleware());
 app.onError(createErrorHandler());
 
@@ -260,7 +288,12 @@ app.post('/api/actions/consume', async (c) => {
     return c.json({ ok: true });
   }
   return c.json(
-    { error: 'RATE_LIMIT_EXCEEDED', action, reason: result.reason },
+    {
+      error: 'RATE_LIMIT_EXCEEDED',
+      action,
+      // reason se añade solo cuando allowed === false; se tipa con any para no propagar el tipo unión aquí.
+      reason: (result as any).reason,
+    },
     429
   );
 });
@@ -295,7 +328,7 @@ app.post('/api/premium/ticket', async (c) => {
   }
   const result = await createPaymentTicket(db, userId, { reference, paymentDate, amount });
   if ('error' in result) {
-    throw new ValidationError('TICKET_PERSISTENCE_ERROR', result.error);
+    throw new ValidationError('INVALID_TICKET_DATA', result.error);
   }
   return c.json({ ok: true, ticketId: result.id });
 });
@@ -371,7 +404,7 @@ app.all('/api/cron/profile-photos-sanitize', async (c) => {
     ok: true,
     processed,
     truncated: list.truncated,
-    cursor: list.cursor ?? null,
+    cursor: 'cursor' in list ? list.cursor : null,
   });
 });
 
@@ -391,12 +424,31 @@ app.get('/api/profile/photo', async (c) => {
   }
 
   const contentType = obj.httpMetadata?.contentType || 'image/jpeg';
-  return new Response(obj.body, {
+  // Tipado flexible: el cuerpo se expone como ReadableStream/ArrayBuffer según el runtime.
+  const body: any = (obj as any).body ?? obj;
+  return new Response(body, {
     headers: {
       'Content-Type': contentType,
       'Cache-Control': 'private, max-age=3600',
     },
   });
+});
+
+/** Manifest PWA con Content-Type correcto (requerido por especificación). */
+app.get('/manifest.webmanifest', async (c) => {
+  try {
+    const res = await c.env.ASSETS.fetch(new Request(new URL('/manifest.webmanifest', c.req.url)));
+    if (!res.ok) return res;
+    return new Response(res.body, {
+      status: res.status,
+      headers: {
+        ...Object.fromEntries(res.headers),
+        'Content-Type': 'application/manifest+json',
+      },
+    });
+  } catch {
+    return c.json({ error: 'Manifest no encontrado' }, 404);
+  }
 });
 
 app.all('*', async (c) => {
