@@ -17,13 +17,15 @@
         "db:migrate:local:seed": "wrangler d1 execute venezuela-live-db --local --file=./migrations/0004_seed_proposals.sql",
         "db:migrate:local:full": "npm run db:migrate:local:all && npm run db:migrate:local:proposals && npm run db:migrate:local:seed",
         "db:migrate:local:gamification": "wrangler d1 execute venezuela-live-db --local --persist-to=%LOCALAPPDATA%\\venezuela-live-wrangler --file=./migrations/0005_create_achievements.sql && wrangler d1 execute venezuela-live-db --local --persist-to=%LOCALAPPDATA%\\venezuela-live-wrangler --file=./migrations/0006_create_user_achievements.sql && wrangler d1 execute venezuela-live-db --local --persist-to=%LOCALAPPDATA%\\venezuela-live-wrangler --file=./migrations/0007_add_gamification_to_profiles.sql",
-    "db:migrate:local:safe": "powershell -ExecutionPolicy Bypass -File ./scripts/migrate-d1-local.ps1",
-    "db:migrate:remote": "powershell -ExecutionPolicy Bypass -File ./scripts/migrate-d1-remote.ps1",
-    "check:apis": "npm run db:migrate:local:safe && npm run build"
+        "db:migrate:local:safe": "powershell -ExecutionPolicy Bypass -File ./scripts/migrate-d1-local.ps1",
+        "db:migrate:remote": "powershell -ExecutionPolicy Bypass -File ./scripts/migrate-d1-remote.ps1",
+        "check:apis": "npm run db:migrate:local:safe && npm run build",
+        "security:test:sanitize": "node ./scripts/test-sanitize.mjs"
     },
     "dependencies": {
         "@react-oauth/google": "^0.13.4",
         "@vitejs/plugin-react": "^5.1.4",
+        "dompurify": "^3.3.2",
         "hono": "^4.12.3",
         "jose": "^6.1.3",
         "lucide-react": "^0.575.0",
@@ -35,7 +37,9 @@
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20260305.0",
         "@tailwindcss/vite": "^4.2.1",
+        "@types/dompurify": "^3.0.5",
         "autoprefixer": "^10.4.27",
+        "jsdom": "^28.1.0",
         "postcss": "^8.5.8",
         "tailwindcss": "^4.2.1",
         "typescript": "^5.9.3",
