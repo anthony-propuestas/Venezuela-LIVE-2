@@ -529,70 +529,69 @@ export default function App() {
       return; // Ya votó esta semana en esta propuesta
     }
     
-    // Verificar si ya tiene un voto diferente esta semana (solo puede 1 like O 1 dislike)
-    if (currentVote && canVoteThisWeek(currentVote.timestamp) === false) {
-      return;
-    }
-    
-    // Si ya votó lo mismo, no hacer nada
-    if (currentVote && currentVote.type === voteType && !canVoteThisWeek(currentVote.timestamp)) {
-      return;
-    }
+    // Estado anterior para rollback optimista
+    const prevThreads = threads;
+    const prevUserVotes = userVotes;
 
-    // Rate limit: consumir cuota de likes (cada voto up/down cuenta)
-    try {
-      const result = await api.consumeAction('likes');
-      if (!result.ok) {
-        setRateLimitModal({ action: result.action || 'likes', reason: result.reason });
-        return;
-      }
-    } catch (err) {
-      if (handleAccessDenied(err)) return;
-      addError?.('No se pudo procesar el voto. Intenta de nuevo.');
-      return;
-    }
-
-    setThreads(prevThreads => prevThreads.map(thread => {
+    // Aplicar actualización optimista en memoria
+    const updatedThreads = prevThreads.map(thread => {
       if (thread.id !== threadId) return thread;
 
       const updatedProposals = thread.proposals.map(prop => {
         if (prop.id !== proposalId) return prop;
-        
+
         let newUpvotes = prop.upvotes;
         let newDownvotes = prop.downvotes;
-        
-        // Si ya había votado esta semana y puede volver a votar, remover voto anterior
+
+        // Si ya había un voto anterior en otra semana, revertirlo del conteo
         if (currentVote && canVoteThisWeek(currentVote.timestamp)) {
           if (currentVote.type === 'up') newUpvotes--;
           if (currentVote.type === 'down') newDownvotes--;
         }
-        
-        // Agregar nuevo voto
+
         if (isUpvote) {
           newUpvotes++;
         } else {
           newDownvotes++;
         }
-        
+
         return {
           ...prop,
           upvotes: newUpvotes,
           downvotes: newDownvotes,
-          netScore: newUpvotes - newDownvotes
+          netScore: newUpvotes - newDownvotes,
         };
       });
 
       return { ...thread, proposals: updatedProposals };
-    }));
+    });
 
-    // Registrar el voto del usuario
-    setUserVotes(prev => ({
-      ...prev,
+    const updatedUserVotes = {
+      ...prevUserVotes,
       [voteKey]: {
         type: voteType,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+      },
+    };
+
+    setThreads(updatedThreads);
+    setUserVotes(updatedUserVotes);
+
+    // Rate limit en segundo plano con posible rollback
+    try {
+      const result = await api.consumeAction('likes');
+      if (!result.ok) {
+        setRateLimitModal({ action: result.action || 'likes', reason: result.reason });
+        setThreads(prevThreads);
+        setUserVotes(prevUserVotes);
       }
-    }));
+    } catch (err) {
+      if (!handleAccessDenied(err)) {
+        addError?.('No se pudo procesar el voto. Intenta de nuevo.');
+      }
+      setThreads(prevThreads);
+      setUserVotes(prevUserVotes);
+    }
   };
   
   // Verificar si el usuario puede votar en una propuesta específica

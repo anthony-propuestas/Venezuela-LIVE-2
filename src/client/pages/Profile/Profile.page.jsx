@@ -252,8 +252,71 @@ export default function Profile({
   if (profileLoading) {
     return (
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+        <div className="space-y-6">
+          {/* Skeleton foto de perfil */}
+          <div className="bg-slate-800/60 rounded-2xl border border-slate-700/50 p-6">
+            <div className="flex items-center gap-2 text-slate-300 text-sm font-medium mb-3">
+              <div className="w-4 h-4 rounded-full skeleton" />
+              <div className="h-3 w-32 rounded-full skeleton" />
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="w-24 h-24 rounded-full skeleton" />
+              <div className="flex flex-col gap-2">
+                <div className="h-9 w-32 rounded-lg skeleton" />
+                <div className="h-3 w-40 rounded-full skeleton" />
+              </div>
+            </div>
+          </div>
+
+          {/* Skeleton nombre */}
+          <div className="bg-slate-800/60 rounded-2xl border border-slate-700/50 p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-4 h-4 rounded-full skeleton" />
+              <div className="h-3 w-24 rounded-full skeleton" />
+            </div>
+            <div className="h-10 w-full rounded-lg skeleton" />
+          </div>
+
+          {/* Skeleton nombre de usuario */}
+          <div className="bg-slate-800/60 rounded-2xl border border-slate-700/50 p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-4 h-4 rounded-full skeleton" />
+              <div className="h-3 w-32 rounded-full skeleton" />
+            </div>
+            <div className="h-10 w-full rounded-lg skeleton" />
+            <div className="h-3 w-64 mt-3 rounded-full skeleton" />
+          </div>
+
+          {/* Skeleton correo, fecha, descripción, ideologías */}
+          {[1, 2, 3, 4].map((key) => (
+            <div
+              key={key}
+              className="bg-slate-800/60 rounded-2xl border border-slate-700/50 p-6"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-4 h-4 rounded-full skeleton" />
+                <div className="h-3 w-40 rounded-full skeleton" />
+              </div>
+              {key === 3 ? (
+                <div className="space-y-2">
+                  <div className="h-4 w-full rounded-lg skeleton" />
+                  <div className="h-4 w-5/6 rounded-lg skeleton" />
+                  <div className="h-4 w-2/3 rounded-lg skeleton" />
+                </div>
+              ) : (
+                <div className="h-10 w-full rounded-lg skeleton" />
+              )}
+            </div>
+          ))}
+
+          {/* Skeleton botones finales */}
+          <div className="bg-slate-800/60 rounded-2xl border border-slate-700/50 p-6">
+            <div className="h-11 w-full rounded-xl skeleton" />
+            <div className="h-3 w-56 mt-3 mx-auto rounded-full skeleton" />
+          </div>
+          <div className="bg-slate-800/60 rounded-2xl border border-slate-700/50 p-6">
+            <div className="h-11 w-full rounded-xl skeleton" />
+          </div>
         </div>
       </main>
     );
