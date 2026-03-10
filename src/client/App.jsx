@@ -753,7 +753,7 @@ export default function App() {
             <button 
               onClick={() => handleVote(threadId, proposal.id, true)}
               disabled={!canVote && currentVote !== null}
-              className={`flex items-center gap-1.5 px-4 py-2 transition ${
+              className={`touch-target flex items-center gap-1.5 px-4 py-2 transition ${
                 currentVote === 'up' 
                   ? 'bg-emerald-900/50 text-emerald-400' 
                   : !canVote && currentVote !== null
@@ -769,7 +769,7 @@ export default function App() {
             <button 
               onClick={() => handleVote(threadId, proposal.id, false)}
               disabled={!canVote && currentVote !== null}
-              className={`flex items-center gap-1.5 px-4 py-2 transition ${
+              className={`touch-target flex items-center gap-1.5 px-4 py-2 transition ${
                 currentVote === 'down' 
                   ? 'bg-red-900/50 text-red-400' 
                   : !canVote && currentVote !== null
@@ -897,13 +897,13 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-slate-300 font-sans">
+    <div className="min-h-screen bg-black text-slate-300 font-sans pb-20">
       {/* HEADER */}
       <header className="bg-slate-800/90 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <img src="https://flagcdn.com/w40/ve.png" alt="Venezuela" className="w-8 h-6 object-cover rounded-sm" />
-            <h1 className="text-2xl font-extrabold tracking-tight">
+            <h1 className="text-h1 font-extrabold tracking-tight">
               <span className="text-yellow-400">VEN</span><span className="text-blue-500">EZU</span><span className="text-red-500">ELA</span> <span className="text-white">LIVE</span>
             </h1>
           </div>
@@ -920,7 +920,7 @@ export default function App() {
                   setCurrentPage('menu');
                 }
               }}
-              className="flex items-center justify-center w-10 h-10 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-xl transition"
+              className="touch-target bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-xl transition"
               aria-label={currentPage === 'menu' ? 'Volver' : 'Abrir menú'}
             >
               {currentPage === 'menu' ? (
@@ -999,11 +999,11 @@ export default function App() {
             <div className="flex items-center gap-3 mb-4">
               <img src="https://flagcdn.com/w80/ve.png" alt="Venezuela" className="w-12 h-9 object-cover rounded-md" />
               <div>
-                <h2 className="text-2xl font-bold text-slate-100">Venezuela LIVE</h2>
-                <p className="text-slate-400 text-sm">Plataforma de debate y consenso ciudadano</p>
+                <h2 className="text-h2 font-bold text-slate-100">Venezuela LIVE</h2>
+                <p className="text-body text-slate-400">Plataforma de debate y consenso ciudadano</p>
               </div>
             </div>
-            <p className="text-slate-300 leading-relaxed mb-6">
+            <p className="text-body-lg text-slate-300 leading-relaxed mb-6">
               Conectamos ideas, propuestas y voces de la sociedad venezolana. Aquí puedes votar, comentar y aportar
               notas de contexto sobre temas de economía, salud, educación, seguridad y servicios públicos.
             </p>
@@ -1020,7 +1020,7 @@ export default function App() {
           <div className="flex flex-wrap gap-4 mb-8">
             <button 
               onClick={() => setIsWeeklySummaryOpen(!isWeeklySummaryOpen)}
-              className="flex items-center gap-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-400 px-6 py-4 rounded-xl text-sm font-bold transition"
+              className="touch-target flex items-center gap-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-400 px-6 py-4 rounded-xl text-sm font-bold transition"
             >
               <BarChart3 className="w-5 h-5" />
               Resumen semanal
@@ -1036,7 +1036,7 @@ export default function App() {
             
             <button 
               onClick={() => setCurrentPage('donations')}
-              className="flex items-center gap-3 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/40 text-pink-400 px-6 py-4 rounded-xl text-sm font-bold transition"
+              className="touch-target flex items-center gap-3 bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/40 text-pink-400 px-6 py-4 rounded-xl text-sm font-bold transition"
             >
               <Heart className="w-5 h-5" />
               Donaciones
@@ -1044,7 +1044,7 @@ export default function App() {
             
             <button 
               onClick={() => setCurrentPage('nosotros')}
-              className="flex items-center gap-3 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-400 px-6 py-4 rounded-xl text-sm font-bold transition"
+              className="touch-target flex items-center gap-3 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-400 px-6 py-4 rounded-xl text-sm font-bold transition"
             >
               <Users className="w-5 h-5" />
               Nosotros
@@ -1058,7 +1058,7 @@ export default function App() {
                 setSuggestedSubcategory('');
                 setSuggestedWhy('');
               }}
-              className="flex items-center gap-3 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 px-6 py-4 rounded-xl text-sm font-bold transition"
+              className="touch-target flex items-center gap-3 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 px-6 py-4 rounded-xl text-sm font-bold transition"
             >
               <FolderPlus className="w-5 h-5" />
               Sugerir nueva categoría
@@ -1880,6 +1880,52 @@ export default function App() {
           </div>
         </main>
       )}
+      
+      {/* Bottom App Bar: navegación principal accesible al pulgar */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 bg-slate-900/95 border-t border-slate-700/60 backdrop-blur-md">
+        <div className="max-w-4xl mx-auto px-4 py-2 flex items-center justify-between gap-2">
+          <button
+            onClick={() => setCurrentPage('home')}
+            className={`touch-target flex-1 flex flex-col items-center justify-center gap-1 rounded-xl px-2 ${
+              currentPage === 'home'
+                ? 'bg-slate-800 text-cyan-400'
+                : 'text-slate-400 hover:bg-slate-800/60'
+            }`}
+          >
+            <Activity className="w-5 h-5" />
+            <span className="text-meta font-semibold">Inicio</span>
+          </button>
+          <button
+            onClick={() => setCurrentPage('general')}
+            className={`touch-target flex-1 flex flex-col items-center justify-center gap-1 rounded-xl px-2 ${
+              currentPage === 'general'
+                ? 'bg-slate-800 text-cyan-400'
+                : 'text-slate-400 hover:bg-slate-800/60'
+            }`}
+          >
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-meta font-semibold">General</span>
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="touch-target flex-1 flex flex-col items-center justify-center gap-1 rounded-xl px-2 bg-cyan-600 text-white hover:bg-cyan-500"
+          >
+            <PlusCircle className="w-5 h-5" />
+            <span className="text-meta font-semibold">Nuevo</span>
+          </button>
+          <button
+            onClick={() => setCurrentPage('perfil')}
+            className={`touch-target flex-1 flex flex-col items-center justify-center gap-1 rounded-xl px-2 ${
+              currentPage === 'perfil'
+                ? 'bg-slate-800 text-cyan-400'
+                : 'text-slate-400 hover:bg-slate-800/60'
+            }`}
+          >
+            <User className="w-5 h-5" />
+            <span className="text-meta font-semibold">Perfil</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

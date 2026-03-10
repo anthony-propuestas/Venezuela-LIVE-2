@@ -54,7 +54,7 @@ Mejoras de Usabilidad (UX/UI): Plan de Acción para Inclusión Tecnológica
 
 Este plan de acción interviene la filosofía de diseño generada por el paradigma conversacional para adaptar orgánicamente "Venezuela Live" al clima informático real en el que interactúan sus usuarios finales, abordando de frente el deterioro de las infraestructuras eléctricas y telemáticas.
 
-C1: Transición Definitiva hacia una PWA (Progressive Web App) y Modo Offline-First (Días 1-7)
+Cancelada : C1: Transición Definitiva hacia una PWA (Progressive Web App) y Modo Offline-First (Días 1-7)
 
 La aplicación requiere una refactorización arquitectónica para manejar la inestabilidad extrema de la red. La plataforma debe ser dotada de capacidades de "Offline-First". El ingeniero debe codificar y registrar meticulosamente un "Service Worker" profundo acoplado con estrategias de almacenamiento en caché predictivas.
 
@@ -62,16 +62,16 @@ Cuando un ciudadano navega por la aplicación, el Service Worker interceptará s
 
 C2: Optimización Acusada de Carga Cognitiva y Conservación de Ancho de Banda (Días 8-15)
 
-La atención visual y el rendimiento psicológico de un usuario operando bajo el estrés de protestas o entornos hostiles deben ser tratados con sumo respeto por parte de la interfaz de usuario.
+Gestión Activa de Carga (Retroalimentación) | Reemplazar todos los íconos de carga circulares genéricos (spinners) por Skeleton Screens detalladas de las publicaciones faltantes, complementadas con Lógica de Actualización Optimista. | Reduce dramáticamente la percepción temporal de latencia del sistema, disipando la frustración psicológica en conexiones degradas de 3G y HSPA+. |
 
-A continuación, se presenta el contenido de la tabla en un formato de texto plano y estructurado, manteniendo la conexión entre el Control de Seguridad, la Acción Técnica y su Efecto Defensivo asociado:
+Accesibilidad Lumínica | Integrar un Modo Oscuro absoluto basado en códigos hexadecimales de negro puro (OLED Black, #000000) en lugar de tonos grises o azulados corporativos, obedeciendo las consultas de medios CSS prefers-color-scheme. | Evita la iluminación innecesaria de píxeles, logrando una conservación máxima y crítica de las baterías de teléfonos inteligentes ante cortes rotativos de electricidad generalizados. |
 
 
 Fase 4: Institucionalización del Sistema de Diseño y Abstracción Visual (Días 16-21)
 
 El paso final que sella la resiliencia de la plataforma es la eliminación de la inconsistencia visual creada por múltiples sesiones de generación de código por IA. Se debe extraer, analizar y consolidar cada elemento gráfico incrustado directamente en los componentes lógicos en un marco de trabajo de diseño centralizado (Design System o librería de tokens de diseño).
 
-Establecer una escala tipográfica coherente, utilizando familias de fuentes modulares con altas tasas de legibilidad en pantallas minúsculas. Ajustar el espaciado global para facilitar la navegación a una sola mano —particularmente reubicando las acciones centrales de contenido y búsqueda hacia una barra de navegación táctil inferior (Bottom App Bar) a la distancia del pulgar— y estandarizar las zonas de impacto táctil a un mínimo de 48 por 48 píxeles. Esta cohesión visual reducirá de manera contundente la curva de aprendizaje de las poblaciones mayores y de bajo alfabetismo digital, permitiendo que la interacción y navegación por la plataforma de red social "Venezuela Live" pase de ser un ejercicio analítico fatigante a convertirse en una experiencia operativa puramente intuitiva.
+D1: Establecer una escala tipográfica coherente, utilizando familias de fuentes modulares con altas tasas de legibilidad en pantallas minúsculas. Ajustar el espaciado global para facilitar la navegación a una sola mano —particularmente reubicando las acciones centrales de contenido y búsqueda hacia una barra de navegación táctil inferior (Bottom App Bar) a la distancia del pulgar— y estandarizar las zonas de impacto táctil a un mínimo de 48 por 48 píxeles. Esta cohesión visual reducirá de manera contundente la curva de aprendizaje de las poblaciones mayores y de bajo alfabetismo digital, permitiendo que la interacción y navegación por la plataforma de red social "Venezuela Live" pase de ser un ejercicio analítico fatigante a convertirse en una experiencia operativa puramente intuitiva.
 
 
 
