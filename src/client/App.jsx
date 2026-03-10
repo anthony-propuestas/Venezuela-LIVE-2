@@ -201,6 +201,14 @@ export default function App() {
   const [newProposalDesc, setNewProposalDesc] = useState('');
   const [newProposalAuthor, setNewProposalAuthor] = useState('');
 
+  // Modal Contrapropuesta (límites de longitud según análisis de seguridad)
+  const CONTRA_TITLE_MAX = 200;
+  const CONTRA_DESC_MAX = 2000;
+  const [contrapropuestaModalOpen, setContrapropuestaModalOpen] = useState(false);
+  const [contrapropuestaThreadId, setContrapropuestaThreadId] = useState(null);
+  const [newContrapropuestaTitle, setNewContrapropuestaTitle] = useState('');
+  const [newContrapropuestaDesc, setNewContrapropuestaDesc] = useState('');
+
   // Estado para votos del usuario (1 like O 1 dislike por propuesta, reinicio semanal)
   const [userVotes, setUserVotes] = useState(() => {
     const saved = localStorage.getItem('venezuelaLiveVotes');
@@ -358,6 +366,85 @@ export default function App() {
     setNewProposalTitle('');
     setNewProposalDesc('');
     setNewProposalAuthor('');
+  };
+
+  /** Agregar contrapropuesta. Prioriza API (persistencia + gamificación); fallback a mock si tema no existe en BD. */
+  const handleAddContrapropuesta = async (e) => {
+    e.preventDefault();
+    const title = String(newContrapropuestaTitle ?? '').trim();
+    const description = String(newContrapropuestaDesc ?? '').trim();
+
+    if (!title || !description) {
+      addError?.('Completa el nombre y la descripción de la contrapropuesta.');
+      return;
+    }
+    if (title.length > CONTRA_TITLE_MAX || description.length > CONTRA_DESC_MAX) {
+      addError?.(`El nombre debe tener hasta ${CONTRA_TITLE_MAX} caracteres y la descripción hasta ${CONTRA_DESC_MAX}.`);
+      return;
+    }
+    if (!contrapropuestaThreadId || !threads.some((t) => t.id === contrapropuestaThreadId)) {
+      addError?.('No se pudo identificar el tema. Recarga la página e intenta de nuevo.');
+      return;
+    }
+
+    let newProposal;
+
+    try {
+      const result = await api.createCounterProposal(contrapropuestaThreadId, { title, description });
+
+      if (result.ok && result.proposal) {
+        newProposal = {
+          id: result.proposal.id,
+          title: result.proposal.title,
+          description: result.proposal.description,
+          author: result.proposal.author ?? 'Anónimo',
+          upvotes: result.proposal.upvotes ?? 0,
+          downvotes: result.proposal.downvotes ?? 0,
+          netScore: result.proposal.netScore ?? 0,
+          comments: result.proposal.comments ?? [],
+          notes: result.proposal.notes ?? [],
+        };
+      } else if (result.rateLimited) {
+        setRateLimitModal({ action: result.action || 'proposals', reason: result.reason });
+        return;
+      } else if (result.notFound) {
+        // Tema no existe en BD (mock creado localmente): fallback a guardado solo en estado
+        const consumeResult = await api.consumeAction('proposals');
+        if (!consumeResult.ok) {
+          setRateLimitModal({ action: consumeResult.action || 'proposals', reason: consumeResult.reason });
+          return;
+        }
+        newProposal = {
+          id: crypto.randomUUID(),
+          title: title.slice(0, CONTRA_TITLE_MAX),
+          description: description.slice(0, CONTRA_DESC_MAX),
+          author: 'Anónimo',
+          upvotes: 0,
+          downvotes: 0,
+          netScore: 0,
+          comments: [],
+          notes: [],
+        };
+      }
+    } catch (err) {
+      if (handleAccessDenied(err)) return;
+      addError?.(err?.message || 'No se pudo crear la contrapropuesta. Intenta de nuevo.');
+      return;
+    }
+
+    if (newProposal) {
+      setThreads((prev) =>
+        prev.map((thread) =>
+          thread.id !== contrapropuestaThreadId
+            ? thread
+            : { ...thread, proposals: [...(thread.proposals || []), newProposal] }
+        )
+      );
+    }
+    setContrapropuestaModalOpen(false);
+    setContrapropuestaThreadId(null);
+    setNewContrapropuestaTitle('');
+    setNewContrapropuestaDesc('');
   };
 
   const handleAddComment = async (threadId, proposalId, text, position) => {
@@ -1650,7 +1737,13 @@ export default function App() {
                       );
                     })()}
 
-                    <button className="mt-6 w-full py-4 border-2 border-dashed border-slate-600/50 text-slate-500 font-medium rounded-xl hover:bg-slate-700/30 hover:text-cyan-400 hover:border-cyan-500/40 transition flex justify-center items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setContrapropuestaThreadId(thread.id);
+                        setContrapropuestaModalOpen(true);
+                      }}
+                      className="mt-6 w-full py-4 border-2 border-dashed border-slate-600/50 text-slate-500 font-medium rounded-xl hover:bg-slate-700/30 hover:text-cyan-400 hover:border-cyan-500/40 transition flex justify-center items-center gap-2"
+                    >
                       <PlusCircle className="w-5 h-5" /> Agregar Contrapropuesta
                     </button>
                   </div>
@@ -1771,6 +1864,81 @@ export default function App() {
                   className="px-5 py-3 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-500 rounded-xl transition flex items-center gap-2 shadow-lg shadow-cyan-900/30"
                 >
                   <PlusCircle className="w-5 h-5" /> Publicar Tema
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL AGREGAR CONTRAPROPUESTA - Formulario resumido (nombre + descripción) */}
+      {contrapropuestaModalOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg border border-slate-700/50">
+            <div className="flex justify-between items-center p-6 border-b border-slate-700/50 sticky top-0 bg-slate-800 z-10">
+              <h2 className="text-xl font-bold text-slate-200">Agregar Contrapropuesta</h2>
+              <button
+                onClick={() => {
+                  setContrapropuestaModalOpen(false);
+                  setContrapropuestaThreadId(null);
+                  setNewContrapropuestaTitle('');
+                  setNewContrapropuestaDesc('');
+                }}
+                className="text-slate-500 hover:text-slate-300 transition p-1 hover:bg-slate-700/50 rounded-lg"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddContrapropuesta} className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-slate-400 mb-2">Nombre de la contrapropuesta</label>
+                <input
+                  type="text"
+                  required
+                  maxLength={CONTRA_TITLE_MAX}
+                  placeholder="Ej: Privatización parcial del sistema"
+                  value={newContrapropuestaTitle}
+                  onChange={(e) => setNewContrapropuestaTitle(e.target.value.slice(0, CONTRA_TITLE_MAX))}
+                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl p-3 text-sm text-slate-300 placeholder-slate-500 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 outline-none"
+                />
+                <p className="mt-1 text-xs text-slate-500">{newContrapropuestaTitle.length}/{CONTRA_TITLE_MAX}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-400 mb-2">Descripción</label>
+                <textarea
+                  required
+                  rows="4"
+                  maxLength={CONTRA_DESC_MAX}
+                  placeholder="Explica tu contrapropuesta..."
+                  value={newContrapropuestaDesc}
+                  onChange={(e) => setNewContrapropuestaDesc(e.target.value.slice(0, CONTRA_DESC_MAX))}
+                  className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl p-3 text-sm text-slate-300 placeholder-slate-500 resize-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 outline-none"
+                />
+                <p className="mt-1 text-xs text-slate-500">{newContrapropuestaDesc.length}/{CONTRA_DESC_MAX}</p>
+              </div>
+
+              <p className="text-xs text-slate-500">Tu contrapropuesta aparecerá como &quot;Anónimo&quot; hasta que conectes tu perfil.</p>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setContrapropuestaModalOpen(false);
+                    setContrapropuestaThreadId(null);
+                    setNewContrapropuestaTitle('');
+                    setNewContrapropuestaDesc('');
+                  }}
+                  className="px-5 py-3 text-sm font-bold text-slate-400 hover:bg-slate-700/50 rounded-xl transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-3 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-500 rounded-xl transition flex items-center gap-2 shadow-lg shadow-cyan-900/30"
+                >
+                  <PlusCircle className="w-4 h-4" /> Publicar Contrapropuesta
                 </button>
               </div>
             </form>

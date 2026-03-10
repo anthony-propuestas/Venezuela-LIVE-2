@@ -21,6 +21,7 @@ import {
 } from './repositories/profile.repository.js';
 import { deleteProfilePhotoObject, getProfilePhotoObject, putProfilePhotoObject } from './repositories/r2.repository.js';
 import { sanitizeImage } from './domain/media/sanitizer.js';
+import { emitGamificationEventAsync } from './domain/gamification/integration.js';
 
 registerGamificationListener();
 
@@ -28,6 +29,12 @@ import { USERNAME_MIN, USERNAME_MAX, USERNAME_REGEX } from '@shared/constants.js
 
 const MAX_PHOTO_SIZE = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+// Límites contrapropuestas (análisis de seguridad Zero Trust)
+const PROPOSAL_TITLE_MAX = 200;
+const PROPOSAL_DESC_MAX = 2000;
+const TOPIC_ID_MAX_LEN = 64;
+const TOPIC_ID_REGEX = /^[a-zA-Z0-9_-]+$/;
 
 type AppBindings = { Bindings: Env; Variables: { user: User } };
 
@@ -259,10 +266,101 @@ app.post('/api/actions/consume', async (c) => {
   if (result.allowed) {
     return c.json({ ok: true });
   }
-  return c.json(
-    { error: 'RATE_LIMIT_EXCEEDED', action, reason: result.reason },
-    429
-  );
+  const reason = 'reason' in result ? result.reason : 'Límite diario alcanzado.';
+  return c.json({ error: 'RATE_LIMIT_EXCEEDED', action, reason }, 429);
+});
+
+/** Crear contrapropuesta. Zero Trust: autor desde perfil, nunca desde body. */
+app.post('/api/topics/:topicId/proposals', async (c) => {
+  const { userId, name: jwtName } = c.get('user');
+  const db = c.env.DB;
+  const kv = c.env.RATE_LIMIT_KV;
+
+  // 1) Validar topicId (formato y longitud)
+  const topicIdRaw = c.req.param('topicId');
+  const topicId = typeof topicIdRaw === 'string' ? topicIdRaw.trim() : '';
+  if (!topicId || topicId.length > TOPIC_ID_MAX_LEN || !TOPIC_ID_REGEX.test(topicId)) {
+    throw new ValidationError('INVALID_TOPIC_ID', 'Identificador de tema inválido.');
+  }
+
+  // 2) Parsear y validar body (solo title y description; author nunca del cliente)
+  let body: { title?: string; description?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    throw new ValidationError('INVALID_PROPOSAL_DATA', 'Datos inválidos.');
+  }
+  const title = String(body?.title ?? '').trim();
+  const description = String(body?.description ?? '').trim();
+  if (!title || !description) {
+    throw new ValidationError('INVALID_PROPOSAL_DATA', 'Completa el nombre y la descripción.');
+  }
+  if (title.length > PROPOSAL_TITLE_MAX || description.length > PROPOSAL_DESC_MAX) {
+    throw new ValidationError('INVALID_PROPOSAL_DATA', 'El nombre o la descripción exceden el límite permitido.');
+  }
+
+  // 3) Verificar que el tema existe
+  const topicRow = await db
+    .prepare('SELECT id FROM topics WHERE id = ?')
+    .bind(topicId)
+    .first<{ id?: string }>();
+  if (!topicRow?.id) {
+    throw new NotFoundError('TOPIC_NOT_FOUND', 'El tema no existe.');
+  }
+
+  // 4) Obtener autor desde perfil (Zero Trust)
+  const profile = await getProfileByUserId(db, userId);
+  const author =
+    (profile?.display_name && String(profile.display_name).trim()) ||
+    (profile?.username && String(profile.username).trim()) ||
+    (jwtName && String(jwtName).trim()) ||
+    'Usuario';
+
+  // 5) Rate limit (solo tras validaciones exitosas)
+  const premium = await isUserPremium(db, userId);
+  if (!premium && kv) {
+    const rlResult = await checkAndIncrement(kv, userId, 'proposals');
+    if (rlResult.allowed === false) {
+      return c.json(
+        { error: 'RATE_LIMIT_EXCEEDED', action: 'proposals', reason: rlResult.reason },
+        429
+      );
+    }
+  }
+
+  // 6) Insertar propuesta (consultas preparadas)
+  const proposalId = crypto.randomUUID();
+  const titleSafe = title.slice(0, PROPOSAL_TITLE_MAX);
+  const descriptionSafe = description.slice(0, PROPOSAL_DESC_MAX);
+  const authorSafe = author.slice(0, 100);
+
+  await db
+    .prepare(
+      'INSERT INTO proposals (id, topic_id, title, description, author, upvotes, downvotes) VALUES (?, ?, ?, ?, ?, 0, 0)'
+    )
+    .bind(proposalId, topicId, titleSafe, descriptionSafe, authorSafe)
+    .run();
+
+  // 7) Gamificación en background
+  emitGamificationEventAsync(c as unknown as Parameters<typeof emitGamificationEventAsync>[0], {
+    type: 'CREATE_COUNTER_PROPOSAL',
+    payload: { userId, topicId, proposalId },
+  });
+
+  return c.json({
+    proposal: {
+      id: proposalId,
+      topicId,
+      title: titleSafe,
+      description: descriptionSafe,
+      author: authorSafe,
+      upvotes: 0,
+      downvotes: 0,
+      netScore: 0,
+      comments: [],
+      notes: [],
+    },
+  });
 });
 
 app.get('/api/premium/status', async (c) => {
@@ -300,9 +398,10 @@ app.post('/api/premium/ticket', async (c) => {
   return c.json({ ok: true, ticketId: result.id });
 });
 
-app.get('/api/reports/weekly/positives', (c) => handleGetReport(c, 'positives'));
-app.get('/api/reports/weekly/negatives', (c) => handleGetReport(c, 'negatives'));
-app.get('/api/reports/weekly/volume', (c) => handleGetReport(c, 'volume'));
+// Cast necesario: handleGetReport espera Context con solo DB y R2_BUCKET; AppBindings incluye Variables
+app.get('/api/reports/weekly/positives', (c) => handleGetReport(c as any, 'positives'));
+app.get('/api/reports/weekly/negatives', (c) => handleGetReport(c as any, 'negatives'));
+app.get('/api/reports/weekly/volume', (c) => handleGetReport(c as any, 'volume'));
 
 /** Cron semanal invocado por HTTP (Pages no tiene scheduled). Solo header X-Cron-Secret (no query, evita logs/Referrer). */
 app.all('/api/cron/weekly-reports', async (c) => {
@@ -371,7 +470,7 @@ app.all('/api/cron/profile-photos-sanitize', async (c) => {
     ok: true,
     processed,
     truncated: list.truncated,
-    cursor: list.cursor ?? null,
+    cursor: ('cursor' in list ? list.cursor : undefined) ?? null,
   });
 });
 
@@ -391,7 +490,8 @@ app.get('/api/profile/photo', async (c) => {
   }
 
   const contentType = obj.httpMetadata?.contentType || 'image/jpeg';
-  return new Response(obj.body, {
+  const body = (obj as { body?: ReadableStream }).body;
+  return new Response(body, {
     headers: {
       'Content-Type': contentType,
       'Cache-Control': 'private, max-age=3600',

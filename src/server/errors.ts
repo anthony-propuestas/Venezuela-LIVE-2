@@ -1,10 +1,13 @@
 export type ErrorCode =
   | 'UNAUTHORIZED'
   | 'PROFILE_NOT_FOUND'
+  | 'PROFILE_PHOTO_NOT_FOUND'
+  | 'TOPIC_NOT_FOUND'
   | 'INVALID_PROFILE_DATA'
   | 'INVALID_USERNAME_FORMAT'
+  | 'INVALID_TOPIC_ID'
+  | 'INVALID_PROPOSAL_DATA'
   | 'USERNAME_TAKEN'
-  | 'PROFILE_PHOTO_NOT_FOUND'
   | 'INVALID_FILE'
   | 'FILE_TOO_LARGE'
   | 'UNSUPPORTED_MEDIA_TYPE'
@@ -45,14 +48,14 @@ export class DomainError extends Error {
 }
 
 export class ValidationError extends DomainError {
-  constructor(code: Extract<ErrorCode, 'INVALID_PROFILE_DATA' | 'INVALID_USERNAME_FORMAT' | 'INVALID_FILE' | 'FILE_TOO_LARGE' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_ACTION' | 'INVALID_TICKET_DATA'>, message: string, fieldErrors?: FieldError[]) {
+  constructor(code: Extract<ErrorCode, 'INVALID_PROFILE_DATA' | 'INVALID_USERNAME_FORMAT' | 'INVALID_TOPIC_ID' | 'INVALID_PROPOSAL_DATA' | 'INVALID_FILE' | 'FILE_TOO_LARGE' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_ACTION' | 'INVALID_TICKET_DATA' | 'TICKET_PERSISTENCE_ERROR'>, message: string, fieldErrors?: FieldError[]) {
     super(code, message, 400, fieldErrors);
     this.name = 'ValidationError';
   }
 }
 
 export class NotFoundError extends DomainError {
-  constructor(code: Extract<ErrorCode, 'PROFILE_NOT_FOUND' | 'PROFILE_PHOTO_NOT_FOUND'>, message: string) {
+  constructor(code: Extract<ErrorCode, 'PROFILE_NOT_FOUND' | 'PROFILE_PHOTO_NOT_FOUND' | 'TOPIC_NOT_FOUND'>, message: string) {
     super(code, message, 404);
     this.name = 'NotFoundError';
   }

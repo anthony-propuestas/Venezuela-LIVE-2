@@ -188,6 +188,43 @@ export async function consumeAction(action) {
   return { ok: true };
 }
 
+/**
+ * Crea una contrapropuesta en un tema existente.
+ * Zero Trust: el autor se deriva en el backend desde el perfil del usuario autenticado.
+ * @param {string} topicId - ID del tema
+ * @param {{ title: string; description: string }} body - Nombre y descripción (máx 200 y 2000 chars)
+ * @returns {{ ok: true, proposal: object }} | {{ ok: false, rateLimited: true, action, reason }} | {{ ok: false, notFound: true }}
+ */
+export async function createCounterProposal(topicId, { title, description }) {
+  const credential = getCredential();
+  if (!credential) throw new Error('SESSION_EXPIRED');
+  const res = await fetch(`${API_BASE}/api/topics/${encodeURIComponent(topicId)}/proposals`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${credential}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title, description }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 429) {
+    return { ok: false, rateLimited: true, action: data.action || 'proposals', reason: data.reason };
+  }
+  if (res.status === 404) {
+    return { ok: false, notFound: true };
+  }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('SESSION_EXPIRED');
+    if (res.status === 403) {
+      const e = new Error(data?.error || 'Acceso denegado. Correo no autorizado.');
+      e.code = 'ACCESS_DENIED';
+      throw e;
+    }
+    throw new Error(data?.message || data?.error || `Error (${res.status})`);
+  }
+  return { ok: true, proposal: data.proposal };
+}
+
 /** Estado Premium: { isPremium, alias, tickets }. */
 export async function getPremiumStatus() {
   return apiFetch('/api/premium/status');
