@@ -382,7 +382,8 @@ export default function App() {
       addError?.(`El nombre debe tener hasta ${CONTRA_TITLE_MAX} caracteres y la descripción hasta ${CONTRA_DESC_MAX}.`);
       return;
     }
-    if (!contrapropuestaThreadId || !threads.some((t) => t.id === contrapropuestaThreadId)) {
+    const threadId = contrapropuestaThreadId;
+    if (!threadId || !threads.some((t) => String(t.id) === String(threadId))) {
       addError?.('No se pudo identificar el tema. Recarga la página e intenta de nuevo.');
       return;
     }
@@ -390,19 +391,20 @@ export default function App() {
     let newProposal;
 
     try {
-      const result = await api.createCounterProposal(contrapropuestaThreadId, { title, description });
+      const result = await api.createCounterProposal(threadId, { title, description });
 
       if (result.ok && result.proposal) {
+        const p = result.proposal;
         newProposal = {
-          id: result.proposal.id,
-          title: result.proposal.title,
-          description: result.proposal.description,
-          author: result.proposal.author ?? 'Anónimo',
-          upvotes: result.proposal.upvotes ?? 0,
-          downvotes: result.proposal.downvotes ?? 0,
-          netScore: result.proposal.netScore ?? 0,
-          comments: result.proposal.comments ?? [],
-          notes: result.proposal.notes ?? [],
+          id: p.id,
+          title: p.title ?? title,
+          description: p.description ?? description,
+          author: p.author ?? 'Anónimo',
+          upvotes: p.upvotes ?? 0,
+          downvotes: p.downvotes ?? 0,
+          netScore: p.netScore ?? (p.upvotes - p.downvotes) ?? 0,
+          comments: Array.isArray(p.comments) ? p.comments : [],
+          notes: Array.isArray(p.notes) ? p.notes : [],
         };
       } else if (result.rateLimited) {
         setRateLimitModal({ action: result.action || 'proposals', reason: result.reason });
@@ -430,21 +432,23 @@ export default function App() {
       if (handleAccessDenied(err)) return;
       addError?.(err?.message || 'No se pudo crear la contrapropuesta. Intenta de nuevo.');
       return;
+    } finally {
+      // Cerrar modal siempre al dar a Publicar (éxito, rate limit o error)
+      setContrapropuestaModalOpen(false);
+      setContrapropuestaThreadId(null);
+      setNewContrapropuestaTitle('');
+      setNewContrapropuestaDesc('');
     }
 
     if (newProposal) {
       setThreads((prev) =>
         prev.map((thread) =>
-          thread.id !== contrapropuestaThreadId
+          String(thread.id) !== String(threadId)
             ? thread
             : { ...thread, proposals: [...(thread.proposals || []), newProposal] }
         )
       );
     }
-    setContrapropuestaModalOpen(false);
-    setContrapropuestaThreadId(null);
-    setNewContrapropuestaTitle('');
-    setNewContrapropuestaDesc('');
   };
 
   const handleAddComment = async (threadId, proposalId, text, position) => {
