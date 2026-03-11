@@ -341,11 +341,15 @@ app.post('/api/topics/:topicId/proposals', async (c) => {
     .bind(proposalId, topicId, titleSafe, descriptionSafe, authorSafe)
     .run();
 
-  // 7) Gamificación en background
-  emitGamificationEventAsync(c as unknown as Parameters<typeof emitGamificationEventAsync>[0], {
-    type: 'CREATE_COUNTER_PROPOSAL',
-    payload: { userId, topicId, proposalId },
-  });
+  // 7) Gamificación en background (no debe afectar la respuesta; ya guardado en BD)
+  try {
+    emitGamificationEventAsync(c as unknown as Parameters<typeof emitGamificationEventAsync>[0], {
+      type: 'CREATE_COUNTER_PROPOSAL',
+      payload: { userId, topicId, proposalId },
+    });
+  } catch (_err) {
+    // Ignorar: la propuesta ya está guardada; no devolver 500 por gamificación
+  }
 
   return c.json({
     proposal: {

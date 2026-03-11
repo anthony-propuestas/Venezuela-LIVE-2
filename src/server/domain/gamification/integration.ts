@@ -17,20 +17,25 @@ import type { GamificationEvent } from './types.js';
 
 /**
  * Emite un evento de gamificación en background sin bloquear la respuesta.
- * Usa executionCtx.waitUntil para que la gamificación no bloquee el endpoint.
+ * Usa executionCtx.waitUntil cuando existe (Cloudflare production); si no, hace fire-and-forget.
+ * No debe lanzar nunca: en dev/local executionCtx puede no existir y provocaría 500.
  */
 export function emitGamificationEventAsync(
   c: Context<{ Bindings: { DB: D1Database }; Variables: Record<string, unknown> }>,
   event: GamificationEvent
 ): void {
-  const ctx = c.executionCtx;
-  if (ctx?.waitUntil) {
-    ctx.waitUntil(
-      emitGamificationEvent(event, { DB: c.env.DB })
-    );
-  } else {
-    emitGamificationEvent(event, { DB: c.env.DB }).catch((err) =>
-      console.error('[Gamification] Evento no pudo procesarse:', err)
-    );
+  try {
+    const ctx = c.executionCtx as { waitUntil?: (p: Promise<unknown>) => void } | undefined;
+    if (ctx?.waitUntil && typeof ctx.waitUntil === 'function') {
+      ctx.waitUntil(
+        emitGamificationEvent(event, { DB: c.env.DB })
+      );
+    } else {
+      emitGamificationEvent(event, { DB: c.env.DB }).catch((err) =>
+        console.error('[Gamification] Evento no pudo procesarse:', err)
+      );
+    }
+  } catch (err) {
+    console.error('[Gamification] emitGamificationEventAsync:', err);
   }
 }
