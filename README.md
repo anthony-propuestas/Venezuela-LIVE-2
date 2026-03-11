@@ -4,8 +4,21 @@ Aplicación web desplegada en **Cloudflare Pages** (assets estáticos + Pages Fu
 
 ---
 
+## Versión y cambios recientes
+
+| Versión | Cambios |
+|---------|---------|
+| **1.1.9.2** | Actualización menor. |
+| **1.1.9.1** | Contrapropuestas: verificación y ajustes de seguridad. |
+| **1.1.9** | Contrapropuestas (flujo seguro). |
+| **1.1.8** | Fase 3 y 4 del plan (Seguro). |
+| **1.1.7** | C2: color y símbolo de carga. |
+
+---
+
 ## Índice
 
+- [Versión y cambios recientes](#versión-y-cambios-recientes)
 - [Stack tecnológico](#stack-tecnológico)
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Funcionalidades](#funcionalidades)
