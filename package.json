@@ -20,7 +20,8 @@
         "db:migrate:local:safe": "powershell -ExecutionPolicy Bypass -File ./scripts/migrate-d1-local.ps1",
         "db:migrate:remote": "powershell -ExecutionPolicy Bypass -File ./scripts/migrate-d1-remote.ps1",
         "check:apis": "npm run db:migrate:local:safe && npm run build",
-        "security:test:sanitize": "node ./scripts/test-sanitize.mjs"
+        "security:test:sanitize": "node ./scripts/test-sanitize.mjs",
+        "test": "vitest run"
     },
     "dependencies": {
         "@mary/exif-rm": "npm:@jsr/mary__exif-rm@^0.2.2",
@@ -44,6 +45,7 @@
         "postcss": "^8.5.8",
         "tailwindcss": "^4.2.1",
         "typescript": "^5.9.3",
+        "vitest": "^4.1.7",
         "wrangler": "^4.69.0"
     }
 }

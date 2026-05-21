@@ -8,6 +8,8 @@ Aplicación web desplegada en **Cloudflare Pages** (assets estáticos + Pages Fu
 
 | Versión | Cambios |
 |---------|---------|
+| **BUGS** | Corrección de bugs en auth middleware y server index. |
+| **1.2** | Actualización de documentación. |
 | **1.1.9.2** | Actualización menor. |
 | **1.1.9.1** | Contrapropuestas: verificación y ajustes de seguridad. |
 | **1.1.9** | Contrapropuestas (flujo seguro). |
@@ -50,45 +52,62 @@ Aplicación web desplegada en **Cloudflare Pages** (assets estáticos + Pages Fu
 ## Estructura del proyecto
 
 ```
-├── index.html, main.jsx, app.jsx     # Entrada React y app principal
-├── Profile.jsx, login.jsx            # Pantallas de perfil y login
-├── api.js                            # Cliente API del frontend (perfil, foto, premium, etc.)
-├── ErrorContext.jsx                  # Contexto global de errores y banner
-├── index.css                         # Estilos globales (Tailwind)
+├── index.html                        # Entrada HTML
 ├── vite.config.js                    # Vite + proxy /api/ → worker
 ├── tailwind.config.cjs               # Configuración Tailwind
 │
 ├── functions/
 │   └── [[path]].ts                   # Catch-all Pages: recibe todas las rutas y delega en Hono
 │
-├── src/worker/                       # Lógica del backend (Hono)
-│   ├── index.ts                      # App Hono: rutas, auth, middleware
-│   ├── config.ts                     # Lectura de env (client ID, cron secret, premium alias)
-│   ├── types.ts                      # Env, User y tipos compartidos
-│   ├── errors.ts                     # Errores de dominio y mapeo a JSON
-│   ├── profileRepository.ts          # CRUD perfiles, foto key, gamificación (totalXp, logros)
-│   ├── r2Repository.ts               # Subida/lectura/borrado de objetos en R2
-│   ├── rateLimit.ts                  # Rate limiting por acción (likes, comments, proposals)
-│   ├── premium.ts                    # Estado premium y tickets de pago
-│   ├── reports/                      # Reportes PDF semanales
-│   │   ├── controllers.ts            # GET reportes + handler del cron
-│   │   ├── service.ts                # Job semanal y generación on-demand
-│   │   ├── dataLayer.ts              # Consultas D1 para datos de reportes
-│   │   └── pdfEngine.ts              # Generación de PDFs
-│   └── gamification/                 # Sistema de XP y logros (event-driven)
-│       ├── index.ts                  # Exports del módulo
-│       ├── types.ts                  # Eventos, payloads, BASE_XP
-│       ├── eventBus.ts               # Pub/sub de eventos
-│       ├── service.ts                # Procesamiento ACID (D1 batch), asignación XP y logros
-│       ├── listeners.ts              # Registro del listener que consume eventos
-│       ├── integration.ts            # Emisión de eventos desde la API
-│       └── errors.ts                 # GamificationError
+├── src/
+│   ├── client/                       # Frontend React
+│   │   ├── main.jsx, App.jsx         # Entrada y componente raíz
+│   │   ├── auth/                     # Módulo de sesión en memoria (session.js)
+│   │   ├── components/               # Componentes reutilizables (SafeHtml, etc.)
+│   │   ├── context/                  # Contextos globales (errores, etc.)
+│   │   ├── hooks/                    # Custom hooks
+│   │   ├── pages/                    # Pantallas (Login, Profile, etc.)
+│   │   ├── services/                 # Cliente HTTP (api.service.js)
+│   │   └── utils/                    # Utilidades (sanitize.js con DOMPurify)
+│   │
+│   ├── server/                       # Lógica del backend (Hono)
+│   │   ├── index.ts                  # App Hono: rutas, auth, middleware
+│   │   ├── config.ts                 # Lectura de env (client ID, cron secret, premium alias)
+│   │   ├── types.ts                  # Env, User y tipos compartidos
+│   │   ├── errors.ts                 # Errores de dominio y mapeo a JSON
+│   │   ├── premium.ts                # Estado premium y tickets de pago
+│   │   ├── middlewares/
+│   │   │   ├── auth.middleware.ts    # Verificación JWT + resolución de rol desde D1
+│   │   │   ├── errors.middleware.ts  # Manejo centralizado de errores
+│   │   │   └── rateLimit.middleware.ts  # Rate limiting por acción (KV)
+│   │   ├── repositories/
+│   │   │   ├── profile.repository.ts # CRUD perfiles, foto key, gamificación
+│   │   │   └── r2.repository.ts      # Subida/lectura/borrado de objetos en R2
+│   │   └── domain/
+│   │       ├── gamification/         # Sistema de XP y logros (event-driven)
+│   │       │   ├── index.ts, types.ts, errors.ts
+│   │       │   ├── eventBus.ts       # Pub/sub de eventos
+│   │       │   ├── service.ts        # Procesamiento ACID (D1 batch)
+│   │       │   ├── listeners.ts      # Registro del listener de eventos
+│   │       │   └── integration.ts    # Emisión de eventos desde la API
+│   │       ├── media/
+│   │       │   └── sanitizer.ts      # Saneamiento EXIF con @mary/exif-rm
+│   │       └── reports/              # Reportes PDF semanales
+│   │           ├── controllers.ts    # GET reportes + handler del cron
+│   │           ├── service.ts        # Job semanal y generación on-demand
+│   │           ├── dataLayer.ts      # Consultas D1 para datos de reportes
+│   │           └── pdfEngine.ts      # Generación de PDFs
+│   │
+│   └── shared/                       # Tipos y constantes compartidos cliente/servidor
+│       ├── constants.ts
+│       └── types/
 │
-├── migrations/                       # SQL para D1 (orden 0001…0009)
+├── migrations/                       # SQL para D1 (orden 0001…0010)
 ├── scripts/
 │   ├── build-pages-functions.mjs     # Compila functions/ → dist/functions/
 │   ├── migrate-d1-local.ps1          # Ejecuta todas las migraciones en D1 local
-│   └── migrate-d1-remote.ps1         # Ejecuta migraciones en D1 remoto
+│   ├── migrate-d1-remote.ps1         # Ejecuta migraciones en D1 remoto
+│   └── test-sanitize.mjs             # Self-test de sanitización DOMPurify
 ├── wrangler.json                     # Configuración Pages (D1, KV, R2, vars)
 └── package.json                      # Scripts npm (dev, build, deploy, migraciones)
 ```
@@ -255,12 +274,13 @@ Las respuestas de error siguen un cuerpo JSON con `error`, `message` y opcionalm
 
 ## Base de datos y migraciones
 
-La base D1 se configura en `wrangler.json` (binding `DB`). Las migraciones están en `migrations/` en orden numérico:
+La base D1 se configura en `wrangler.json` (binding `DB`). Las migraciones están en `migrations/` en orden numérico (0001–0010):
 
 - Perfiles (user_id, email, display_name, username, birth_date, description, ideologies, photo_key, total_xp, contadores de gamificación, is_premium).
 - Propuestas y esquemas relacionados.
 - Logros y `user_achievements`.
 - Premium: `payment_tickets` (id, user_id, reference, payment_date, amount, status, created_at) y restricciones de unicidad según corresponda.
+- RBAC: columna `role TEXT NOT NULL DEFAULT 'user'` en `profiles` con valores `'user'`, `'moderator'`, `'admin'` (migración 0010).
 
 Para entorno local se usa un script que aplica todas las migraciones contra la base D1 local (persistida en una carpeta del sistema). En producción se usan los scripts de migración remota.
 
