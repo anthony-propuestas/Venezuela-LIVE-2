@@ -23,7 +23,8 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | A1 | Cada endpoint documentado existe como ruta en `src/server/` | ✅ |
 | A2 | Los métodos HTTP (GET/POST/PUT/DELETE) coinciden | ✅ |
 | A3 | Header `Authorization: Bearer <token>` requerido en todas las rutas protegidas | ✅ |
-| A4 | Modo test con `VITE_GOOGLE_AUTH_PAUSED=true` acepta cualquier request con `test-user` | ❌ |
+| A4 | Modo dev con `DEV_BYPASS_ALLOWED=true` + `Bearer __dev_bypass__` inyecta usuario `dev-bypass-user` (role: `user`) | ✅ |
+| A8 | `GET /api/profile/photo` documentado con respuesta (Content-Type, Cache-Control, 404 si no hay foto) | ✅ |
 | A5 | Cron endpoints usan header `X-Cron-Secret` (no `Authorization`) | ✅ |
 | A6 | Límites de subida de foto: 2 MB máximo, solo JPG/PNG/WebP | ✅ |
 | A7 | Campos de respuesta de cada endpoint coinciden con los ejemplos en docs | ✅ |
@@ -43,7 +44,7 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | B5 | Tabla `payment_tickets` existe (migración 0008) | ✅ |
 | B6 | Columna `profiles.role` con valores `user\|moderator\|admin` (migración 0010) | ✅ |
 | B7 | Restricción UNIQUE en `profiles.email` (migración 0009) | ✅ |
-| B8 | Formato de KV key: `ratelimit:<userId>:<action>:<YYYY-MM-DD>` | ❌ |
+| B8 | Formato de KV key: `rl:<YYYY-MM-DD>:<userId>:<action>` | ✅ |
 | B9 | Paths de R2: `profiles/<userId>/photo.<ext>` para fotos de perfil | ✅ |
 
 **Cómo verificar:** Lee los archivos `.sql` en `migrations/` y compara con las tablas descritas en `docs/DATABASE.md`.
@@ -77,6 +78,9 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | D5 | Todas las queries a D1 usan prepared statements (`.prepare().bind()`) — ningún string concatenado | ✅ |
 | D6 | Premium users tienen `is_premium = 1` y el rate limit middleware los excluye | ✅ |
 | D7 | Cron endpoints verifican `X-Cron-Secret` antes de ejecutar | ✅ |
+| D8 | `ALLOWLIST_EMAILS` documentado en SECURITY.md: cuando tiene valor, bloquea con 403 emails no listados | ✅ |
+| D9 | Las dos rutas cron (`/weekly-reports` y `/profile-photos-sanitize`) están documentadas como excluidas del JWT middleware | ✅ |
+| D10 | JWT admin en `sessionStorage` está documentado como excepción intencional a la regla de tokens solo en memoria | ✅ |
 
 **Cómo verificar:** Grep `localStorage.setItem` en `src/client/`. Grep `exif-rm` en `src/server/`. Grep `DOMPurify` en `src/client/`. Busca queries sin `.prepare()`.
 
@@ -87,7 +91,8 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | # | Verificar | Estado |
 |---|-----------|--------|
 | E1 | Variables `VITE_*` en `.env.example` coinciden con las documentadas | ✅ |
-| E2 | Variables de backend (Worker) en `.dev.vars.example` o `wrangler.json` coinciden con docs | ❌ |
+| E2 | Variables de backend (Worker) en `.dev.vars.example` o `wrangler.json` coinciden con docs | ✅ |
+| E7 | `ALLOWLIST_EMAILS` aparece en `CONFIGURATION.md` con descripción de comportamiento | ✅ |
 | E3 | `DEV_BYPASS_ALLOWED` solo aparece en entorno de desarrollo, nunca hardcodeado en prod | ✅ |
 | E4 | `compatibility_date` en `wrangler.json` está documentada en `CONFIGURATION.md` | ✅ |
 | E5 | Ambos bindings KV (`RATE_LIMIT_KV` y `RATE_LIMIT`) están en `wrangler.json` — confirmar cuál se usa | ⚠️ `RATE_LIMIT_KV` es el que usa el código; `RATE_LIMIT` es redundante (mismo ID) |
@@ -124,6 +129,11 @@ Llena esta tabla con cada ❌ del checklist. Si no hay discrepancias, deja la ta
 | 4 | Testing | F | `npm test` solo cubre funciones puras del cliente | Existen 3 archivos de test (cliente + servidor) | Fix docs | — |
 | 5 | Workflow | B9 | Checklist describe path como `photos/<userId>` | Docs y código usan `profiles/<userId>/photo.<ext>` | Fix workflow | — |
 | 6 | Testing | A4 | "el middleware devuelve un usuario hardcoded `test-user`" | Middleware usa `dev-bypass-user` (email: `pruebas@local`) activado por `DEV_BYPASS_ALLOWED`, no `VITE_GOOGLE_AUTH_PAUSED` | Fix docs | — |
+| 7 | API | A8 | `GET /api/profile/photo` listado en tabla pero sin sección de respuesta | Retorna imagen binaria + `Content-Type` + `Cache-Control` + 404 si sin foto | Fix docs | — |
+| 8 | Security | D8 | `ALLOWLIST_EMAILS` ausente en SECURITY.md | Middleware bloquea con 403 emails no listados cuando var tiene valor | Fix docs | — |
+| 9 | Security | D9 | Solo `/api/cron/weekly-reports` mencionada como excluida | Middleware excluye también `/api/cron/profile-photos-sanitize` | Fix docs | — |
+| 10 | Config | E7 | `ALLOWLIST_EMAILS` ausente en CONFIGURATION.md | Definida como campo en `Env` type; funcionalmente opcional | Fix docs | — |
+| 11 | Security | D10 | D1 dice tokens nunca en `sessionStorage` sin excepciones | JWT admin se guarda en `sessionStorage` (flujo separado, expira 8h) | Fix docs | — |
 
 **Tipos de acción:**
 - `Fix docs` — el código es correcto, actualizar la documentación
@@ -144,3 +154,4 @@ El workflow está completo cuando:
 | Fecha | Ejecutado por | Discrepancias | Resultado |
 |-------|---------------|---------------|-----------|
 | 2026-05-21 | Claude Code | 6 (A4×2, B8, B9, E2, F) | Resueltas: Fix docs en API.md, DATABASE.md, TESTING.md (×2); Fix código creando `.dev.vars.example`; Fix workflow B9 |
+| 2026-05-21 | Claude Code | 5 (A8, D8, D9, D10, E7) | Resueltas: Fix docs en API.md (GET /profile/photo), SECURITY.md (ALLOWLIST_EMAILS, rutas cron excluidas, excepción JWT admin), CONFIGURATION.md (ALLOWLIST_EMAILS) |

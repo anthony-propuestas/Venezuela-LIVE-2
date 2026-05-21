@@ -28,3 +28,10 @@ export function getPremiumAlias(env: Env): string {
   return env.PREMIUM_ALIAS || '0000 0000 0000 0000 0000 0000';
 }
 
+export function getAdminCredentials(env: Env): { email: string; password: string } {
+  if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) {
+    throw new DependencyError('CONFIG_ERROR', 'ADMIN_EMAIL o ADMIN_PASSWORD no están configurados.');
+  }
+  return { email: env.ADMIN_EMAIL, password: env.ADMIN_PASSWORD };
+}
+

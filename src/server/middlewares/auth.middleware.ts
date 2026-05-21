@@ -76,7 +76,8 @@ export function createAuthMiddleware() {
   return async (c: Context<AppBindings>, next: () => Promise<void>) => {
     if (
       c.req.path === '/api/cron/weekly-reports' ||
-      c.req.path === '/api/cron/profile-photos-sanitize'
+      c.req.path === '/api/cron/profile-photos-sanitize' ||
+      c.req.path.startsWith('/api/admin/')
     ) {
       await next();
       return;

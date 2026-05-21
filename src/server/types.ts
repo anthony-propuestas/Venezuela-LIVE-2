@@ -17,6 +17,9 @@ export type Env = {
   CRON_SECRET: string;
   /** Lista de correos permitidos (separados por coma). Solo ellos pueden acceder. */
   ALLOWLIST_EMAILS: string;
+  /** Credenciales del panel de administración. */
+  ADMIN_EMAIL?: string;
+  ADMIN_PASSWORD?: string;
 }
 
 export type { User } from '@shared/types/api.types.js';

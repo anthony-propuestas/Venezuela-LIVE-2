@@ -9,6 +9,7 @@ Browser
   │     ├── auth/session.js               sesión en memoria (no localStorage)
   │     ├── utils/sanitize.js             DOMPurify
   │     ├── services/api.service.js       cliente HTTP → /api/*
+  │     ├── pages/Admin/Admin.page.jsx    panel admin (login + usuarios/temas/propuestas)
   │     └── pages/, components/, hooks/
   │
   └── HTTP /api/* → Cloudflare Pages
@@ -16,7 +17,8 @@ Browser
         └── functions/[[path]].ts         catch-all Pages Function
               │
               └── Hono app                src/server/index.ts
-                    ├── auth middleware   JWKS verify → D1 role lookup
+                    ├── auth middleware   JWKS verify → D1 role lookup (omite /api/admin/*)
+                    ├── admin middleware  JWT HS256 verify (solo /api/admin/*)
                     ├── rateLimit middleware  KV check
                     ├── error middleware
                     │

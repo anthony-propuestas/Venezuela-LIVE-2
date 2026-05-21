@@ -1,10 +1,19 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from '@client/App'
+import AdminPage from '@client/pages/Admin/Admin.page'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { ErrorProvider, ErrorBanner } from '@client/context/ErrorContext'
 import { AUTH_PAUSED } from '@client/pages/Login/Login.page'
 import '@client/assets/index.css'
+
+if (window.location.pathname.startsWith('/admin')) {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <AdminPage />
+    </React.StrictMode>
+  )
+} else {
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
@@ -32,4 +41,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       </GoogleOAuthProvider>
     )}
   </React.StrictMode>,
-) 
+)
+
+}

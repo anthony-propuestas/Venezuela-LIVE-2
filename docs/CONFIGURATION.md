@@ -19,8 +19,11 @@ Se configuran en `.dev.vars` (local) o en el dashboard de Cloudflare Pages (prod
 |----------|-----------|-------------|
 | `GOOGLE_CLIENT_ID` | Sí | Client ID de la app OAuth en Google Cloud Console. También acepta `VITE_GOOGLE_CLIENT_ID`. |
 | `CRON_SECRET` | Sí | Secreto para autenticar requests a `/api/cron/*` via header `X-Cron-Secret`. |
+| `ADMIN_EMAIL` | Sí | Email del administrador para login en el panel (`POST /api/admin/login`). |
+| `ADMIN_PASSWORD` | Sí | Contraseña de admin y clave de firma del JWT admin (HS256, 8h). |
 | `DEV_BYPASS_ALLOWED` | No | `"true"` activa el bypass de auth en dev. Nunca `"true"` en producción. |
 | `PREMIUM_ALIAS` | No | Número de cuenta/alias para pagos, visible en la UI. Default: `"0000 0000 0000 0000 0000 0000"`. |
+| `ALLOWLIST_EMAILS` | No | Emails autorizados, separados por coma. Si está vacía o ausente, no se aplica filtrado. Si tiene valor, el middleware bloquea con 403 a cualquier email no listado. |
 
 ---
 

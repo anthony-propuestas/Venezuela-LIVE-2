@@ -1,6 +1,6 @@
 # API Reference — Venezuela LIVE
 
-Todos los endpoints están bajo `/api/`. Requieren header `Authorization: Bearer <google_id_token>` salvo los endpoints de cron, que usan `X-Cron-Secret`.
+Todos los endpoints están bajo `/api/`. Requieren header `Authorization: Bearer <google_id_token>` salvo los endpoints de cron (usan `X-Cron-Secret`) y los endpoints de admin (usan `Authorization: Bearer <admin_jwt>`).
 
 ---
 
@@ -52,6 +52,12 @@ El middleware `createAuthMiddleware()` verifica el JWT de Google con JWKS. El `u
   "ideologies": ["string"]
 }
 ```
+
+**GET /api/profile/photo:**
+- Retorna la imagen del perfil directamente desde R2.
+- Header de respuesta: `Content-Type: image/jpeg` (o `image/png` / `image/webp` según el archivo guardado).
+- Incluye `Cache-Control: public, max-age=31536000`.
+- Retorna `404` si el usuario no tiene foto.
 
 **POST /api/profile/photo:**
 - `Content-Type: multipart/form-data`
@@ -161,6 +167,28 @@ Retornan el PDF directamente (`application/pdf`). Los archivos se generan on-dem
 **Header requerido:** `X-Cron-Secret: <CRON_SECRET>`
 
 **profile-photos-sanitize** acepta `?cursor=<string>` para paginar (25 fotos por lote).
+
+---
+
+### Admin
+
+Requieren `Authorization: Bearer <admin_jwt>` salvo el endpoint de login.
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| `POST` | `/api/admin/login` | ninguna | Valida email+password contra env; retorna JWT de 8h |
+| `GET` | `/api/admin/users` | Admin JWT | Lista todos los usuarios (user_id, email, username, role) |
+| `DELETE` | `/api/admin/users/:userId/ratelimits` | Admin JWT | Resetea contadores de rate limit diario del usuario |
+| `GET` | `/api/admin/topics` | Admin JWT | Lista todos los temas ordenados por fecha desc |
+| `DELETE` | `/api/admin/topics/:topicId` | Admin JWT | Elimina tema + sus propuestas + notas en cascada |
+| `GET` | `/api/admin/proposals` | Admin JWT | Últimas 200 propuestas |
+| `DELETE` | `/api/admin/proposals/:proposalId` | Admin JWT | Elimina propuesta + sus notas en cascada |
+
+**POST /api/admin/login — body:**
+```json
+{ "email": "string", "password": "string" }
+```
+**Respuesta:** `{ "token": "<jwt>" }`
 
 ---
 

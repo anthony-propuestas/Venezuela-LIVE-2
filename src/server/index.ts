@@ -8,7 +8,8 @@ import { createErrorHandler } from './middlewares/errors.middleware.js';
 import { isUserPremium, createPaymentTicket, getTicketsByUser } from './premium.js';
 import type { Env, User } from './types.js';
 import { ValidationError, ConflictError, NotFoundError } from './errors';
-import { getCronSecret, getGoogleClientId, getPremiumAlias, isDevBypassAllowed } from './config';
+import { getCronSecret, getGoogleClientId, getPremiumAlias, isDevBypassAllowed, getAdminCredentials } from './config';
+import { signAdminToken, createAdminMiddleware } from './middlewares/admin.middleware.js';
 import {
   getGamificationForUser,
   getPhotoKeyByUserId,
@@ -502,6 +503,98 @@ app.get('/api/profile/photo', async (c) => {
     },
   });
 });
+
+// ─── Admin routes ────────────────────────────────────────────────────────────
+
+app.post('/api/admin/login', async (c) => {
+  let body: { email?: string; password?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Datos inválidos.' }, 400);
+  }
+  let credentials: { email: string; password: string };
+  try {
+    credentials = getAdminCredentials(c.env);
+  } catch {
+    return c.json({ error: 'Panel de administración no configurado.' }, 503);
+  }
+  const emailMatch = String(body.email ?? '').toLowerCase() === credentials.email.toLowerCase();
+  const passMatch = String(body.password ?? '') === credentials.password;
+  if (!emailMatch || !passMatch) {
+    return c.json({ error: 'Credenciales incorrectas.' }, 401);
+  }
+  const token = await signAdminToken(credentials.password);
+  return c.json({ token });
+});
+
+app.use('/api/admin/*', createAdminMiddleware());
+
+app.get('/api/admin/users', async (c) => {
+  const db = c.env.DB;
+  const rows = await db
+    .prepare('SELECT user_id, email, username, role FROM profiles ORDER BY rowid DESC')
+    .all<{ user_id: string; email: string; username: string | null; role: string }>();
+  return c.json({ users: rows.results });
+});
+
+app.delete('/api/admin/users/:userId/ratelimits', async (c) => {
+  const kv = c.env.RATE_LIMIT_KV;
+  if (!kv) return c.json({ ok: true, note: 'KV no configurado.' });
+  const userId = c.req.param('userId');
+  const now = new Date();
+  const today =
+    now.getUTCFullYear() +
+    '-' +
+    String(now.getUTCMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(now.getUTCDate()).padStart(2, '0');
+  await Promise.all(
+    ['likes', 'comments', 'proposals'].map((action) =>
+      kv.delete(`rl:${today}:${userId}:${action}`)
+    )
+  );
+  return c.json({ ok: true });
+});
+
+app.get('/api/admin/topics', async (c) => {
+  const db = c.env.DB;
+  const rows = await db
+    .prepare('SELECT id, category, subcategory, topic_text, created_at FROM topics ORDER BY created_at DESC')
+    .all<{ id: string; category: string; subcategory: string; topic_text: string; created_at: string }>();
+  return c.json({ topics: rows.results });
+});
+
+app.delete('/api/admin/topics/:topicId', async (c) => {
+  const db = c.env.DB;
+  const topicId = c.req.param('topicId');
+  await db.batch([
+    db.prepare('DELETE FROM proposal_notes WHERE proposal_id IN (SELECT id FROM proposals WHERE topic_id = ?)').bind(topicId),
+    db.prepare('DELETE FROM proposals WHERE topic_id = ?').bind(topicId),
+    db.prepare('DELETE FROM topics WHERE id = ?').bind(topicId),
+  ]);
+  return c.json({ ok: true });
+});
+
+app.get('/api/admin/proposals', async (c) => {
+  const db = c.env.DB;
+  const rows = await db
+    .prepare('SELECT id, topic_id, title, author, created_at FROM proposals ORDER BY created_at DESC LIMIT 200')
+    .all<{ id: string; topic_id: string; title: string; author: string; created_at: string }>();
+  return c.json({ proposals: rows.results });
+});
+
+app.delete('/api/admin/proposals/:proposalId', async (c) => {
+  const db = c.env.DB;
+  const proposalId = c.req.param('proposalId');
+  await db.batch([
+    db.prepare('DELETE FROM proposal_notes WHERE proposal_id = ?').bind(proposalId),
+    db.prepare('DELETE FROM proposals WHERE id = ?').bind(proposalId),
+  ]);
+  return c.json({ ok: true });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 app.all('*', async (c) => {
   try {

@@ -39,7 +39,26 @@ vi.mock('./repositories/profile.repository.js', () => ({
 
 import { app } from './index.js';
 import { upsertProfile } from './repositories/profile.repository.js';
+import { signAdminToken } from './middlewares/admin.middleware.js';
 import type { Env } from './types.js';
+
+const ADMIN_EMAIL = 'admin@test.com';
+const ADMIN_PASSWORD = 'test-admin-secret';
+
+const adminEnv = {
+  DEV_BYPASS_ALLOWED: 'true',
+  ALLOWLIST_EMAILS: '',
+  DB: {
+    prepare: vi.fn().mockReturnValue({
+      all: vi.fn().mockResolvedValue({ results: [] }),
+    }),
+  },
+  R2_BUCKET: {} as unknown,
+  CRON_SECRET: 'test-secret',
+  ASSETS: {} as unknown,
+  ADMIN_EMAIL,
+  ADMIN_PASSWORD,
+} as unknown as Env;
 
 // DEV_BYPASS_USER has email='pruebas@local', name='Usuario Pruebas'
 const devEnv = {
@@ -79,5 +98,75 @@ describe('PUT /api/profile – email field (BUGS fix)', () => {
     const input = vi.mocked(upsertProfile).mock.calls[0][1] as { email: string };
     // Must be the JWT email, never the name field ('Usuario Pruebas')
     expect(input.email).toBe('pruebas@local');
+  });
+});
+
+describe('POST /api/admin/login', () => {
+  it('sin ADMIN_EMAIL/ADMIN_PASSWORD en env → 503', async () => {
+    const res = await app.request(
+      '/api/admin/login',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'x', password: 'y' }),
+      },
+      devEnv,
+    );
+    expect(res.status).toBe(503);
+  });
+
+  it('credenciales incorrectas → 401', async () => {
+    const res = await app.request(
+      '/api/admin/login',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: ADMIN_EMAIL, password: 'wrong' }),
+      },
+      adminEnv,
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('credenciales correctas → 200 con token', async () => {
+    const res = await app.request(
+      '/api/admin/login',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
+      },
+      adminEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { token: string };
+    expect(typeof body.token).toBe('string');
+    expect(body.token.length).toBeGreaterThan(0);
+  });
+});
+
+describe('GET /api/admin/users', () => {
+  it('sin Authorization → 401', async () => {
+    const res = await app.request('/api/admin/users', {}, adminEnv);
+    expect(res.status).toBe(401);
+  });
+
+  it('con token válido → 200', async () => {
+    const token = await signAdminToken(ADMIN_PASSWORD);
+    const res = await app.request(
+      '/api/admin/users',
+      { headers: { Authorization: `Bearer ${token}` } },
+      adminEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { users: unknown[] };
+    expect(Array.isArray(body.users)).toBe(true);
+  });
+});
+
+describe('Regression – rutas normales', () => {
+  it('GET /api/profile sin token → 401', async () => {
+    const res = await app.request('/api/profile', {}, devEnv);
+    expect(res.status).toBe(401);
   });
 });
