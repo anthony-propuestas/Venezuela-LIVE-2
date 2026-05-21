@@ -78,7 +78,6 @@ Configúralos en el dashboard bajo **Settings > Functions > Bindings**:
 |------|-------------|---------|
 | D1 | `DB` | `venezuela-live-db` |
 | KV | `RATE_LIMIT_KV` | namespace de rate limiting |
-| KV | `RATE_LIMIT` | mismo namespace |
 | R2 | `R2_BUCKET` | bucket de fotos y PDFs |
 
 ---

@@ -170,3 +170,96 @@ describe('Regression – rutas normales', () => {
     expect(res.status).toBe(401);
   });
 });
+
+const mockPrepareAll = {
+  bind: vi.fn().mockReturnThis(),
+  all: vi.fn().mockResolvedValue({ results: [] }),
+};
+const mockBatch = vi.fn().mockResolvedValue([{}, {}]);
+const topicsEnv = {
+  DEV_BYPASS_ALLOWED: 'true',
+  ALLOWLIST_EMAILS: '',
+  DB: {
+    prepare: vi.fn().mockReturnValue(mockPrepareAll),
+    batch: mockBatch,
+  },
+  R2_BUCKET: {} as unknown,
+  CRON_SECRET: 'test-secret',
+  ASSETS: {} as unknown,
+} as unknown as Env;
+
+const noAuthEnv = {
+  DEV_BYPASS_ALLOWED: 'false',
+  ALLOWLIST_EMAILS: '',
+  DB: {} as unknown,
+  R2_BUCKET: {} as unknown,
+  CRON_SECRET: 'test-secret',
+  ASSETS: {} as unknown,
+} as unknown as Env;
+
+describe('GET /api/topics', () => {
+  it('devuelve { threads: [] } cuando no hay datos en DB', async () => {
+    const res = await app.request('/api/topics', { headers: { Authorization: 'Bearer __dev_bypass__' } }, topicsEnv);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { threads: unknown[] };
+    expect(body.threads).toEqual([]);
+  });
+});
+
+describe('POST /api/topics', () => {
+  beforeEach(() => {
+    mockBatch.mockClear();
+  });
+
+  it('sin auth → 401', async () => {
+    const res = await app.request(
+      '/api/topics',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: 'Política', topicText: 'Tema', proposalTitle: 'P', proposalDescription: 'D' }),
+      },
+      noAuthEnv,
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('campo requerido faltante → 400 INVALID_TOPIC_DATA', async () => {
+    const res = await app.request(
+      '/api/topics',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: 'Política', proposalTitle: 'P', proposalDescription: 'D' }),
+      },
+      topicsEnv,
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('INVALID_TOPIC_DATA');
+  });
+
+  it('body válido → 200 con thread', async () => {
+    const res = await app.request(
+      '/api/topics',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'Política',
+          subcategory: 'Nacional',
+          topicText: 'Un tema de prueba',
+          proposalTitle: 'Mi propuesta',
+          proposalDescription: 'Una descripción de la propuesta.',
+        }),
+      },
+      topicsEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { thread: { category: string; topic: string; proposals: unknown[] } };
+    expect(body.thread.category).toBe('Política');
+    expect(body.thread.topic).toBe('Un tema de prueba');
+    expect(body.thread.proposals).toHaveLength(1);
+    expect(mockBatch).toHaveBeenCalledOnce();
+  });
+});

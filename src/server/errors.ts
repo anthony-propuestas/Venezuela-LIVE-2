@@ -7,6 +7,7 @@ export type ErrorCode =
   | 'INVALID_USERNAME_FORMAT'
   | 'INVALID_TOPIC_ID'
   | 'INVALID_PROPOSAL_DATA'
+  | 'INVALID_TOPIC_DATA'
   | 'USERNAME_TAKEN'
   | 'INVALID_FILE'
   | 'FILE_TOO_LARGE'
@@ -48,7 +49,7 @@ export class DomainError extends Error {
 }
 
 export class ValidationError extends DomainError {
-  constructor(code: Extract<ErrorCode, 'INVALID_PROFILE_DATA' | 'INVALID_USERNAME_FORMAT' | 'INVALID_TOPIC_ID' | 'INVALID_PROPOSAL_DATA' | 'INVALID_FILE' | 'FILE_TOO_LARGE' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_ACTION' | 'INVALID_TICKET_DATA' | 'TICKET_PERSISTENCE_ERROR'>, message: string, fieldErrors?: FieldError[]) {
+  constructor(code: Extract<ErrorCode, 'INVALID_PROFILE_DATA' | 'INVALID_USERNAME_FORMAT' | 'INVALID_TOPIC_ID' | 'INVALID_PROPOSAL_DATA' | 'INVALID_TOPIC_DATA' | 'INVALID_FILE' | 'FILE_TOO_LARGE' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_ACTION' | 'INVALID_TICKET_DATA' | 'TICKET_PERSISTENCE_ERROR'>, message: string, fieldErrors?: FieldError[]) {
     super(code, message, 400, fieldErrors);
     this.name = 'ValidationError';
   }

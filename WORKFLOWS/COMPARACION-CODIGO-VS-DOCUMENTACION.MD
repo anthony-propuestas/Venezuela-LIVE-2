@@ -95,7 +95,7 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | E7 | `ALLOWLIST_EMAILS` aparece en `CONFIGURATION.md` con descripción de comportamiento | ✅ |
 | E3 | `DEV_BYPASS_ALLOWED` solo aparece en entorno de desarrollo, nunca hardcodeado en prod | ✅ |
 | E4 | `compatibility_date` en `wrangler.json` está documentada en `CONFIGURATION.md` | ✅ |
-| E5 | Ambos bindings KV (`RATE_LIMIT_KV` y `RATE_LIMIT`) están en `wrangler.json` — confirmar cuál se usa | ⚠️ `RATE_LIMIT_KV` es el que usa el código; `RATE_LIMIT` es redundante (mismo ID) |
+| E5 | Ambos bindings KV (`RATE_LIMIT_KV` y `RATE_LIMIT`) están en `wrangler.json` — confirmar cuál se usa | ✅ |
 | E6 | `pages_build_output_dir` en `wrangler.json` apunta a `./dist` | ✅ |
 
 **Cómo verificar:** Lee `wrangler.json` y `.env.example`, compara contra la tabla de variables en `docs/CONFIGURATION.md`.

@@ -239,6 +239,40 @@ export async function submitPaymentTicket(body) {
   });
 }
 
+/** Obtiene todos los temas con sus propuestas y notas. */
+export async function getTopics() {
+  return apiFetch('/api/topics');
+}
+
+/**
+ * Crea un nuevo tema con propuesta inicial.
+ * Zero Trust: el autor se deriva en el backend desde el perfil.
+ * @returns {{ ok: true, thread: object }} | {{ ok: false, rateLimited: true, action, reason }}
+ */
+export async function createTopic({ category, subcategory, topicText, proposalTitle, proposalDescription }) {
+  const credential = getCredential();
+  if (!credential) throw new Error('SESSION_EXPIRED');
+  const res = await fetch(`${API_BASE}/api/topics`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${credential}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, subcategory, topicText, proposalTitle, proposalDescription }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 429) {
+    return { ok: false, rateLimited: true, action: data.action || 'proposals', reason: data.reason };
+  }
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('SESSION_EXPIRED');
+    if (res.status === 403) {
+      const e = new Error(data?.error || 'Acceso denegado. Correo no autorizado.');
+      e.code = 'ACCESS_DENIED';
+      throw e;
+    }
+    throw new Error(data?.message || data?.error || `Error (${res.status})`);
+  }
+  return { ok: true, thread: data.thread };
+}
+
 /** Obtiene la foto de perfil como blob URL (requiere autorización). Devuelve null si no hay foto. */
 export async function fetchProfilePhotoBlobURL() {
   const credential = getCredential();

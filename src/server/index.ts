@@ -36,6 +36,8 @@ const PROPOSAL_TITLE_MAX = 200;
 const PROPOSAL_DESC_MAX = 2000;
 const TOPIC_ID_MAX_LEN = 64;
 const TOPIC_ID_REGEX = /^[a-zA-Z0-9_-]+$/;
+const TOPIC_TEXT_MAX = 300;
+const TOPIC_CATEGORY_MAX = 100;
 
 type AppBindings = { Bindings: Env; Variables: { user: User } };
 
@@ -269,6 +271,142 @@ app.post('/api/actions/consume', async (c) => {
   }
   const reason = 'reason' in result ? result.reason : 'Límite diario alcanzado.';
   return c.json({ error: 'RATE_LIMIT_EXCEEDED', action, reason }, 429);
+});
+
+/** Lista todos los temas con sus propuestas y notas. */
+app.get('/api/topics', async (c) => {
+  const db = c.env.DB;
+  const rows = await db
+    .prepare(
+      `SELECT t.id, t.category, t.subcategory, t.topic_text,
+              p.id as p_id, p.title as p_title, p.description as p_description, p.author as p_author,
+              p.upvotes as p_upvotes, p.downvotes as p_downvotes,
+              pn.id as n_id, pn.text as n_text, pn.net_score as n_net_score
+       FROM topics t
+       LEFT JOIN proposals p ON p.topic_id = t.id
+       LEFT JOIN proposal_notes pn ON pn.proposal_id = p.id
+       ORDER BY t.created_at ASC, p.created_at ASC, pn.created_at ASC`
+    )
+    .all<{
+      id: string; category: string; subcategory: string; topic_text: string;
+      p_id: string | null; p_title: string | null; p_description: string | null;
+      p_author: string | null; p_upvotes: number | null; p_downvotes: number | null;
+      n_id: string | null; n_text: string | null; n_net_score: number | null;
+    }>();
+
+  type NoteEntry = { id: string; text: string; netScore: number };
+  type ProposalEntry = {
+    id: string; title: string; description: string; author: string;
+    upvotes: number; downvotes: number; netScore: number; comments: unknown[]; notes: NoteEntry[];
+  };
+  type ThreadEntry = {
+    id: string; category: string; subcategory: string; topic: string;
+    proposals: Map<string, ProposalEntry>;
+  };
+
+  const topicsMap = new Map<string, ThreadEntry>();
+  for (const row of rows.results) {
+    if (!topicsMap.has(row.id)) {
+      topicsMap.set(row.id, { id: row.id, category: row.category, subcategory: row.subcategory ?? '', topic: row.topic_text, proposals: new Map() });
+    }
+    const topic = topicsMap.get(row.id)!;
+    if (row.p_id) {
+      if (!topic.proposals.has(row.p_id)) {
+        topic.proposals.set(row.p_id, {
+          id: row.p_id, title: row.p_title ?? '', description: row.p_description ?? '',
+          author: row.p_author ?? '', upvotes: row.p_upvotes ?? 0, downvotes: row.p_downvotes ?? 0,
+          netScore: (row.p_upvotes ?? 0) - (row.p_downvotes ?? 0), comments: [], notes: [],
+        });
+      }
+      if (row.n_id) {
+        const proposal = topic.proposals.get(row.p_id)!;
+        if (!proposal.notes.some(n => n.id === row.n_id)) {
+          proposal.notes.push({ id: row.n_id, text: row.n_text ?? '', netScore: row.n_net_score ?? 0 });
+        }
+      }
+    }
+  }
+
+  const threads = Array.from(topicsMap.values()).map(t => ({ ...t, proposals: Array.from(t.proposals.values()) }));
+  return c.json({ threads });
+});
+
+/** Crear nuevo tema con propuesta inicial. Zero Trust: autor desde perfil, nunca desde body. */
+app.post('/api/topics', async (c) => {
+  const { userId, name: jwtName } = c.get('user');
+  const db = c.env.DB;
+  const kv = c.env.RATE_LIMIT_KV;
+
+  let body: { category?: string; subcategory?: string; topicText?: string; proposalTitle?: string; proposalDescription?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    throw new ValidationError('INVALID_TOPIC_DATA', 'Datos inválidos.');
+  }
+
+  const category = String(body?.category ?? '').trim();
+  const subcategory = String(body?.subcategory ?? '').trim();
+  const topicText = String(body?.topicText ?? '').trim();
+  const proposalTitle = String(body?.proposalTitle ?? '').trim();
+  const proposalDescription = String(body?.proposalDescription ?? '').trim();
+
+  if (!category || !topicText || !proposalTitle || !proposalDescription) {
+    throw new ValidationError('INVALID_TOPIC_DATA', 'Completa todos los campos requeridos.');
+  }
+  if (category.length > TOPIC_CATEGORY_MAX || subcategory.length > TOPIC_CATEGORY_MAX || topicText.length > TOPIC_TEXT_MAX) {
+    throw new ValidationError('INVALID_TOPIC_DATA', 'El texto del tema o categoría excede el límite permitido.');
+  }
+  if (proposalTitle.length > PROPOSAL_TITLE_MAX || proposalDescription.length > PROPOSAL_DESC_MAX) {
+    throw new ValidationError('INVALID_TOPIC_DATA', 'El nombre o descripción de la propuesta excede el límite permitido.');
+  }
+
+  const profile = await getProfileByUserId(db, userId);
+  const author =
+    (profile?.display_name && String(profile.display_name).trim()) ||
+    (profile?.username && String(profile.username).trim()) ||
+    (jwtName && String(jwtName).trim()) ||
+    'Usuario';
+
+  const premium = await isUserPremium(db, userId);
+  if (!premium && kv) {
+    const rlResult = await checkAndIncrement(kv, userId, 'proposals');
+    if (rlResult.allowed === false) {
+      return c.json({ error: 'RATE_LIMIT_EXCEEDED', action: 'proposals', reason: rlResult.reason }, 429);
+    }
+  }
+
+  const topicId = crypto.randomUUID();
+  const proposalId = crypto.randomUUID();
+  const categorySafe = category.slice(0, TOPIC_CATEGORY_MAX);
+  const subcategorySafe = subcategory.slice(0, TOPIC_CATEGORY_MAX);
+  const topicTextSafe = topicText.slice(0, TOPIC_TEXT_MAX);
+  const titleSafe = proposalTitle.slice(0, PROPOSAL_TITLE_MAX);
+  const descriptionSafe = proposalDescription.slice(0, PROPOSAL_DESC_MAX);
+  const authorSafe = author.slice(0, 100);
+
+  await db.batch([
+    db.prepare('INSERT INTO topics (id, category, subcategory, topic_text) VALUES (?, ?, ?, ?)').bind(topicId, categorySafe, subcategorySafe, topicTextSafe),
+    db.prepare('INSERT INTO proposals (id, topic_id, title, description, author, upvotes, downvotes) VALUES (?, ?, ?, ?, ?, 0, 0)').bind(proposalId, topicId, titleSafe, descriptionSafe, authorSafe),
+  ]);
+
+  try {
+    emitGamificationEventAsync(c as unknown as Parameters<typeof emitGamificationEventAsync>[0], {
+      type: 'CREATE_COUNTER_PROPOSAL',
+      payload: { userId, topicId, proposalId },
+    });
+  } catch (_err) {
+    // Ignorar: tema ya guardado
+  }
+
+  return c.json({
+    thread: {
+      id: topicId, category: categorySafe, subcategory: subcategorySafe, topic: topicTextSafe,
+      proposals: [{
+        id: proposalId, title: titleSafe, description: descriptionSafe, author: authorSafe,
+        upvotes: 0, downvotes: 0, netScore: 0, comments: [], notes: [],
+      }],
+    },
+  });
 });
 
 /** Crear contrapropuesta. Zero Trust: autor desde perfil, nunca desde body. */

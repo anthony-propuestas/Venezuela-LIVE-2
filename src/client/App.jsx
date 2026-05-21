@@ -187,6 +187,14 @@ export default function App() {
     setAuthChecked(true);
   }, []);
   const [threads, setThreads] = useState(INITIAL_THREADS);
+
+  useEffect(() => {
+    if (!estaAutenticado) return;
+    api.getTopics()
+      .then(data => { if (data?.threads?.length) setThreads(data.threads); })
+      .catch(() => {});
+  }, [estaAutenticado]);
+
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [activeSubcategory, setActiveSubcategory] = useState(null);
   const [filterMode, setFilterMode] = useState('cielo');
@@ -326,46 +334,32 @@ export default function App() {
 
   const handleCreateTopic = async (e) => {
     e.preventDefault();
-    if (!newTopicName || !newProposalTitle || !newProposalDesc || !newProposalAuthor) return;
+    if (!newTopicName || !newProposalTitle || !newProposalDesc) return;
 
     try {
-      const result = await api.consumeAction('proposals');
+      const result = await api.createTopic({
+        category: newTopicCategory,
+        subcategory: newTopicSubcategory,
+        topicText: newTopicName,
+        proposalTitle: newProposalTitle,
+        proposalDescription: newProposalDesc,
+      });
       if (!result.ok) {
         setRateLimitModal({ action: result.action || 'proposals', reason: result.reason });
         return;
       }
+      if (result.thread) {
+        setThreads(prev => [result.thread, ...prev]);
+      }
+      setIsModalOpen(false);
+      setNewTopicName('');
+      setNewProposalTitle('');
+      setNewProposalDesc('');
+      setNewProposalAuthor('');
     } catch (err) {
       if (handleAccessDenied(err)) return;
-      addError?.('No se pudo crear la propuesta. Intenta de nuevo.');
-      return;
+      addError?.('No se pudo crear el tema. Intenta de nuevo.');
     }
-
-    const newThread = {
-      id: 't' + Date.now(),
-      category: newTopicCategory,
-      subcategory: newTopicSubcategory,
-      topic: newTopicName,
-      proposals: [
-        {
-          id: 'p' + Date.now(),
-          title: newProposalTitle,
-          description: newProposalDesc,
-          author: newProposalAuthor,
-          upvotes: 1,
-          downvotes: 0,
-          netScore: 1,
-          comments: [],
-          notes: []
-        }
-      ]
-    };
-
-    setThreads([newThread, ...threads]);
-    setIsModalOpen(false);
-    setNewTopicName('');
-    setNewProposalTitle('');
-    setNewProposalDesc('');
-    setNewProposalAuthor('');
   };
 
   /** Agregar contrapropuesta. Prioriza API (persistencia + gamificación); fallback a mock si tema no existe en BD. */

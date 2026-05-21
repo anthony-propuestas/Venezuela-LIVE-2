@@ -74,6 +74,21 @@ POST /api/topics/:topicId/proposals
 
 ---
 
+## Flujo de creación de tema
+
+```
+POST /api/topics
+  1. auth middleware → userId verificado
+  2. Validación de body (category max 100, topicText max 300, proposalTitle max 200, proposalDescription max 2000)
+  3. Obtiene author desde perfil en D1 (Zero Trust)
+  4. Rate limit check en KV (si no es premium)
+  5. INSERT topic + INSERT proposal en D1 (batch)
+  6. emitGamificationEventAsync() en background
+  7. Retorna el thread creado
+```
+
+---
+
 ## Gamificación (event-driven)
 
 ```
@@ -98,7 +113,7 @@ El bus de eventos opera en memoria del Worker. No persiste entre requests si el 
 | Servicio | Binding | Uso |
 |----------|---------|-----|
 | D1 (SQLite) | `DB` | Usuarios, propuestas, logros, rate limit state |
-| KV | `RATE_LIMIT_KV` / `RATE_LIMIT` | Cuotas diarias por usuario |
+| KV | `RATE_LIMIT_KV` | Cuotas diarias por usuario |
 | R2 | `R2_BUCKET` | Fotos de perfil, PDFs de reportes |
 
 **Keys de R2:**

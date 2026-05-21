@@ -123,7 +123,7 @@ wrangler d1 migrations create venezuela-live-db <nombre>
 
 ## KV — Rate Limiting
 
-Binding: `RATE_LIMIT_KV` (también `RATE_LIMIT`).
+Binding: `RATE_LIMIT_KV`.
 
 **Estructura de keys:**
 ```

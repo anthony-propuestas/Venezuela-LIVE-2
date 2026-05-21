@@ -28,7 +28,7 @@ Abre un issue privado en el repositorio o contacta directamente al mantenedor. N
 
 ### Autorización (RBAC)
 - Roles en D1: `user`, `moderator`, `admin` (columna `role` en tabla `profiles`).
-- El autor de propuestas y notas se extrae siempre desde el perfil en D1, nunca del body del request (Zero Trust).
+- El autor de temas, propuestas y notas se extrae siempre desde el perfil en D1, nunca del body del request (Zero Trust).
 
 ### XSS
 - **DOMPurify** sanitiza todo HTML antes de renderizarlo (`src/client/utils/sanitize.js`).

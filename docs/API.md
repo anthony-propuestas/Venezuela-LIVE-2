@@ -56,13 +56,49 @@ El middleware `createAuthMiddleware()` verifica el JWT de Google con JWKS. El `u
 **GET /api/profile/photo:**
 - Retorna la imagen del perfil directamente desde R2.
 - Header de respuesta: `Content-Type: image/jpeg` (o `image/png` / `image/webp` según el archivo guardado).
-- Incluye `Cache-Control: public, max-age=31536000`.
+- Incluye `Cache-Control: private, max-age=3600`.
 - Retorna `404` si el usuario no tiene foto.
 
 **POST /api/profile/photo:**
 - `Content-Type: multipart/form-data`
 - Campo `photo`: JPG / PNG / WebP, max 2 MB
 - El EXIF se elimina antes de guardar en R2
+
+---
+
+### Temas
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| `GET` | `/api/topics` | ninguna | Lista todos los temas con propuestas y notas |
+| `POST` | `/api/topics` | Bearer token | Crea un tema con su propuesta inicial |
+
+**GET /api/topics — respuesta:**
+```json
+{ "threads": [] }
+```
+Array de objetos con topic, proposals anidadas y notes por propuesta.
+
+**POST /api/topics — body:**
+```json
+{
+  "category": "string (max 100)",
+  "topicText": "string (max 300)",
+  "proposalTitle": "string (max 200)",
+  "proposalDescription": "string (max 2000)",
+  "subcategory": "string (opcional)"
+}
+```
+
+- El autor se resuelve desde el perfil en D1 (nunca del body — Zero Trust).
+- Dispara evento de gamificación `CREATE_COUNTER_PROPOSAL` en background.
+- Consume cuota de rate limit `proposals` para usuarios no premium.
+- Retorna `400 INVALID_TOPIC_DATA` si faltan campos requeridos.
+
+**Respuesta:**
+```json
+{ "thread": { "category": "string", "topic": "string", "proposals": [] } }
+```
 
 ---
 
@@ -196,6 +232,7 @@ Requieren `Authorization: Bearer <admin_jwt>` salvo el endpoint de login.
 
 | Código | HTTP | Descripción |
 |--------|------|-------------|
+| `INVALID_TOPIC_DATA` | 400 | Faltan campos requeridos para crear un tema |
 | `VALIDATION_ERROR` | 400 | Datos de entrada inválidos |
 | `CONFLICT_ERROR` | 409 | Recurso ya existe (ej. username tomado) |
 | `NOT_FOUND` | 404 | Recurso no encontrado |

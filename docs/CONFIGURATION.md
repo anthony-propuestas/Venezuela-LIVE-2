@@ -58,8 +58,7 @@ Configuración de Cloudflare Pages/Workers. Define:
 ```json
 "d1_databases": [{ "binding": "DB", "database_name": "venezuela-live-db" }],
 "kv_namespaces": [
-  { "binding": "RATE_LIMIT_KV", "id": "..." },
-  { "binding": "RATE_LIMIT",    "id": "..." }
+  { "binding": "RATE_LIMIT_KV", "id": "..." }
 ],
 "r2_buckets": [{ "binding": "R2_BUCKET", "bucket_name": "..." }]
 ```
