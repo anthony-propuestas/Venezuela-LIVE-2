@@ -6,7 +6,7 @@ Todos los endpoints están bajo `/api/`. Requieren header `Authorization: Bearer
 
 ## Auth
 
-El middleware `createAuthMiddleware()` verifica el JWT de Google con JWKS. El `userId` se extrae del token y el rol se resuelve desde D1. En modo test (`VITE_GOOGLE_AUTH_PAUSED=true`), cualquier request pasa con usuario `test-user`.
+El middleware `createAuthMiddleware()` verifica el JWT de Google con JWKS. El `userId` se extrae del token y el rol se resuelve desde D1. En modo dev (`DEV_BYPASS_ALLOWED=true` en `.dev.vars`), el header `Authorization: Bearer __dev_bypass__` omite la verificación de Google.
 
 ---
 

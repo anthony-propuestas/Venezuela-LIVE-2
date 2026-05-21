@@ -1,0 +1,3 @@
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+CRON_SECRET=your-cron-secret-here
+DEV_BYPASS_ALLOWED=true

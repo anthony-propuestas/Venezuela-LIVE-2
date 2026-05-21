@@ -2,11 +2,13 @@
 
 ## Modo test sin Google OAuth
 
-Establece `VITE_GOOGLE_AUTH_PAUSED=true` en `.env.development`. Con esto, cualquier usuario puede entrar sin autenticarse con Google: el middleware devuelve un usuario hardcoded `test-user`.
+Para hacer funcionar la app sin Google OAuth se necesitan dos ajustes:
 
-**Nunca uses `DEV_BYPASS_ALLOWED=true` en producción.**
+1. **Frontend** — `.env.development`:
+   Establece `VITE_GOOGLE_AUTH_PAUSED=true`. El cliente muestra el botón "Entrar (modo pruebas)" en lugar del login de Google y almacena la credencial `__dev_bypass__` en memoria.
 
-Para activar el bypass también en el backend local:
+2. **Backend** — `.dev.vars`:
+   Establece `DEV_BYPASS_ALLOWED=true`. El middleware acepta el header `Authorization: Bearer __dev_bypass__` sin verificar contra Google JWKS y resuelve el usuario como `{ userId: 'dev-bypass-user', email: 'pruebas@local', role: 'user' }`.
 
 ```
 # .dev.vars
@@ -14,6 +16,8 @@ DEV_BYPASS_ALLOWED=true
 GOOGLE_CLIENT_ID=dummy
 CRON_SECRET=dev-secret
 ```
+
+**Nunca uses `DEV_BYPASS_ALLOWED=true` en producción.**
 
 Luego corre el servidor:
 
@@ -66,6 +70,22 @@ curl -X POST http://localhost:8787/api/cron/profile-photos-sanitize \
 curl -X POST "http://localhost:8787/api/cron/profile-photos-sanitize?cursor=<cursor>" \
   -H "X-Cron-Secret: dev-secret"
 ```
+
+---
+
+## Unit tests
+
+```bash
+npm test
+```
+
+Ejecuta Vitest sobre todo el proyecto (cliente y servidor). La suite de servidor usa mocks; no requiere servidor activo ni base de datos.
+
+Archivos de test:
+
+- `src/client/pages/Login/Login.page.test.jsx` — cubre `typewriterStep(state, topics)`: avanza o retrocede un carácter en el efecto typewriter, cicla entre temas cuando el texto queda vacío.
+- `src/server/index.test.ts` — cubre las rutas principales del servidor con mocks de D1, KV y R2.
+- `src/server/middlewares/auth.middleware.test.ts` — cubre el middleware de autenticación con JWKS mockeado.
 
 ---
 

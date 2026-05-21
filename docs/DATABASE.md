@@ -127,10 +127,10 @@ Binding: `RATE_LIMIT_KV` (también `RATE_LIMIT`).
 
 **Estructura de keys:**
 ```
-ratelimit:<userId>:<action>:<YYYY-MM-DD>
+rl:<YYYY-MM-DD>:<userId>:<action>
 ```
 
-Ejemplo: `ratelimit:user123:proposals:2026-05-21`
+Ejemplo: `rl:2026-05-21:user123:proposals`
 
 El valor es un contador de entero. Se resetea automáticamente al cambiar la fecha (TTL de 24h+).
 
