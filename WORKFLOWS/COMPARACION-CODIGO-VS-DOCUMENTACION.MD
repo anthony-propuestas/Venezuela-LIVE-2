@@ -71,8 +71,8 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 
 | # | Verificar | Estado |
 |---|-----------|--------|
-| D1 | Tokens de sesión NUNCA en `localStorage` ni `sessionStorage` — solo en memoria | ✅ |
-| D2 | `localStorage` solo contiene: `venezuelaLiveVotes`, `venezuelaLiveNoteVotes` | ✅ |
+| D1 | Por defecto los tokens de sesión están solo en memoria; `VITE_PERSIST_SESSIONS=true` habilita persistencia en `localStorage` (clave `venlive_session_v1`). **Excepción:** JWT admin en `sessionStorage` (flujo separado, 8h) | ✅ |
+| D2 | `localStorage` contiene: `venezuelaLiveVotes`, `venezuelaLiveNoteVotes`; opcionalmente `venlive_session_v1` (solo si `VITE_PERSIST_SESSIONS=true`) | ✅ |
 | D3 | EXIF removido con `@mary/exif-rm` ANTES de guardar en R2 | ✅ |
 | D4 | DOMPurify importado y usado antes de cualquier render de HTML arbitrario | ✅ |
 | D5 | Todas las queries a D1 usan prepared statements (`.prepare().bind()`) — ningún string concatenado | ✅ |
@@ -134,6 +134,9 @@ Llena esta tabla con cada ❌ del checklist. Si no hay discrepancias, deja la ta
 | 9 | Security | D9 | Solo `/api/cron/weekly-reports` mencionada como excluida | Middleware excluye también `/api/cron/profile-photos-sanitize` | Fix docs | — |
 | 10 | Config | E7 | `ALLOWLIST_EMAILS` ausente en CONFIGURATION.md | Definida como campo en `Env` type; funcionalmente opcional | Fix docs | — |
 | 11 | Security | D10 | D1 dice tokens nunca en `sessionStorage` sin excepciones | JWT admin se guarda en `sessionStorage` (flujo separado, expira 8h) | Fix docs | — |
+| 12 | Security | D2 | `localStorage` key documentada como `vl_session` en SECURITY.md y CONFIGURATION.md | Código usa `venlive_session_v1` (`session.js:5`, `session.test.js:4`) | Fix docs | — |
+| 13 | Security | D1/D2 | Checklist decía "NUNCA en localStorage" y listaba solo 2 keys | `session.js` persiste a localStorage cuando `VITE_PERSIST_SESSIONS=true` (key `venlive_session_v1`) | Fix workflow | — |
+| 14 | Testing | F4 | TESTING.md listaba 3 archivos de test | Existe `src/client/auth/session.test.js` (sesión en memoria y localStorage) | Fix docs | — |
 
 **Tipos de acción:**
 - `Fix docs` — el código es correcto, actualizar la documentación
@@ -155,3 +158,4 @@ El workflow está completo cuando:
 |-------|---------------|---------------|-----------|
 | 2026-05-21 | Claude Code | 6 (A4×2, B8, B9, E2, F) | Resueltas: Fix docs en API.md, DATABASE.md, TESTING.md (×2); Fix código creando `.dev.vars.example`; Fix workflow B9 |
 | 2026-05-21 | Claude Code | 5 (A8, D8, D9, D10, E7) | Resueltas: Fix docs en API.md (GET /profile/photo), SECURITY.md (ALLOWLIST_EMAILS, rutas cron excluidas, excepción JWT admin), CONFIGURATION.md (ALLOWLIST_EMAILS) |
+| 2026-05-21 | Claude Code | 3 (D2 key name, D1/D2 session persistence, F4 session.test.js) | Resueltas: Fix docs en SECURITY.md + CONFIGURATION.md (key `vl_session`→`venlive_session_v1`), TESTING.md (nuevo test), Fix workflow D1/D2 |

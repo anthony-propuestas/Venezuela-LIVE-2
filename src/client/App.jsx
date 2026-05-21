@@ -1,4 +1,5 @@
-import Login, { LoginBypass, getStoredAuth, clearAuth, AUTH_PAUSED } from '@client/pages/Login/Login.page';
+import Login, { LoginBypass, getStoredAuth, clearAuth, saveAuth, AUTH_PAUSED } from '@client/pages/Login/Login.page';
+import { useGoogleOneTapLogin } from '@react-oauth/google';
 import Profile from '@client/pages/Profile/Profile.page';
 import { useError } from '@client/context/ErrorContext';
 import * as api from '@client/services/api.service';
@@ -94,6 +95,7 @@ const VALID_PAGES = ['home', 'general', 'perfil', 'donations', 'nosotros', 'prem
 export default function App() {
   const [estaAutenticado, setEstaAutenticado] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [sessionNearExpiry, setSessionNearExpiry] = useState(false);
 
   useEffect(() => {
     const stored = getStoredAuth();
@@ -232,9 +234,16 @@ export default function App() {
   useEffect(() => {
     if (!estaAutenticado) return;
     const check = () => {
-      if (!getStoredAuth()) {
+      const stored = getStoredAuth();
+      if (!stored) {
         addError('Tu sesión ha expirado. Inicia sesión de nuevo.', 'session_expired');
         setEstaAutenticado(false);
+        setSessionNearExpiry(false);
+        return;
+      }
+      // Activar re-auth silenciosa si quedan menos de 5 minutos
+      if (stored.expiresAt && stored.expiresAt - Date.now() < 5 * 60 * 1000) {
+        setSessionNearExpiry(true);
       }
     };
     const interval = setInterval(check, 60000);
@@ -245,6 +254,19 @@ export default function App() {
       window.removeEventListener('focus', onFocus);
     };
   }, [estaAutenticado, addError]);
+
+  // Re-autenticación silenciosa via One Tap cuando la sesión está por expirar
+  useGoogleOneTapLogin({
+    onSuccess: (response) => {
+      if (response?.credential) {
+        saveAuth(response.credential);
+        setSessionNearExpiry(false);
+      }
+    },
+    onError: () => setSessionNearExpiry(false),
+    disabled: !estaAutenticado || !sessionNearExpiry || AUTH_PAUSED,
+    cancel_on_tap_outside: false,
+  });
 
   const handleCreateTopic = async (e) => {
     e.preventDefault();

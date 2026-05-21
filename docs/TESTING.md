@@ -86,6 +86,7 @@ Archivos de test:
 - `src/client/pages/Login/Login.page.test.jsx` — cubre `typewriterStep(state, topics)`: avanza o retrocede un carácter en el efecto typewriter, cicla entre temas cuando el texto queda vacío.
 - `src/server/index.test.ts` — cubre las rutas principales del servidor con mocks de D1, KV y R2.
 - `src/server/middlewares/auth.middleware.test.ts` — cubre el middleware de autenticación con JWKS mockeado.
+- `src/client/auth/session.test.js` — cubre `setSession`, `getSession`, `clearSession`, `clearPersistentSession`: comportamiento en memoria y con persistencia en localStorage (`VITE_PERSIST_SESSIONS=true`).
 
 ---
 

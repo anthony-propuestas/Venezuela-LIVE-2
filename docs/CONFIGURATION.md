@@ -9,6 +9,7 @@ Se inyectan en tiempo de build. Quedan hardcodeadas en el bundle JS del cliente.
 | Variable | Valores | Descripción |
 |----------|---------|-------------|
 | `VITE_GOOGLE_AUTH_PAUSED` | `true` / `false` | `true` desactiva Google OAuth; cualquiera entra sin autenticarse. Solo para desarrollo. |
+| `VITE_PERSIST_SESSIONS` | `true` / `false` | `true` persiste la sesión en `localStorage` (clave `venlive_session_v1`) para sobrevivir recargas. Default: sin persistencia. No usar en dispositivos compartidos. |
 | `VITE_SUGGESTIONS_EMAIL` | email | Email para el formulario "Sugerir categoría" (opcional). |
 
 ### Backend (Worker/Pages Functions)

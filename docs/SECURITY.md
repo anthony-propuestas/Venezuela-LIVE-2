@@ -10,7 +10,8 @@ Abre un issue privado en el repositorio o contacta directamente al mantenedor. N
 
 ### Autenticación
 - **Google OAuth 2.0** con verificación de JWT vía JWKS (no se confía en el token sin verificar).
-- La sesión de usuario se guarda **en memoria** del frontend (`src/client/auth/session.js`), nunca en `localStorage` ni `sessionStorage`.
+- La sesión de usuario se guarda **en memoria** del frontend (`src/client/auth/session.js`). Si `VITE_PERSIST_SESSIONS=true`, también se persiste en `localStorage` (clave: `venlive_session_v1`) para sobrevivir recargas de página; los errores de storage (modo privado, blocked) se ignoran silenciosamente.
+- Cuando la sesión tiene <5 minutos restantes, se intenta un re-login silencioso via Google One Tap (`useGoogleOneTapLogin`).
 - El `userId` y el rol se resuelven desde D1 en cada request; el cliente no puede elevar su propio rol.
 - **Excepción:** el JWT del panel admin (`/admin`) se guarda en `sessionStorage` del navegador. Es un flujo separado al OAuth de usuario; el token expira en 8 horas y no contiene datos de sesión de usuario.
 
