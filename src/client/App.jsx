@@ -81,16 +81,8 @@ const formatTimeRemaining = (targetDate) => {
   return `${minutes}m`;
 };
 
-const CATEGORY_TREE = [
-  { name: 'Economía', subcategories: ['Moneda', 'Inflación', 'Impuestos'] },
-  { name: 'Salud', subcategories: ['Infraestructura', 'Personal Médico', 'Insumos'] },
-  { name: 'Seguridad', subcategories: ['Prevención', 'Cárceles', 'Policía'] },
-  { name: 'Educación', subcategories: ['Docentes', 'Infraestructura', 'Currículo'] },
-  { name: 'Servicios Públicos', subcategories: ['Electricidad', 'Agua', 'Internet', 'Transporte'] }
-];
-
 /** Páginas válidas para navegación (evita estados inválidos al volver del menú). */
-const VALID_PAGES = ['home', 'general', 'perfil', 'donations', 'nosotros', 'premium'];
+const VALID_PAGES = ['home', 'general', 'perfil', 'donations', 'nosotros', 'premium', 'category'];
 
 export default function App() {
   const [estaAutenticado, setEstaAutenticado] = useState(false);
@@ -111,6 +103,59 @@ export default function App() {
       .catch(() => {});
   }, [estaAutenticado]);
 
+  const [categories, setCategories] = useState([]);
+  const [activeCategorySlug, setActiveCategorySlug] = useState(null);
+
+  useEffect(() => {
+    if (!estaAutenticado) return;
+    api.getCategories()
+      .then(data => {
+        const cats = data?.categories || [];
+        setCategories(cats);
+        if (cats.length > 0) {
+          setNewTopicCategory(prev => prev || cats[0].name);
+          setNewTopicSubcategory(prev => prev || (cats[0].subcategories[0] || ''));
+        }
+        const path = window.location.pathname;
+        if (path !== '/' && !path.startsWith('/admin')) {
+          const slug = path.replace(/^\//, '');
+          const match = cats.find(c => c.slug === slug);
+          if (match) {
+            setCurrentPage('category');
+            setActiveCategory(match.name);
+            setActiveCategorySlug(match.slug);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [estaAutenticado]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/') {
+        setCurrentPage('home');
+        setActiveCategory('Todas');
+        setActiveCategorySlug(null);
+        setActiveSubcategory(null);
+      } else if (!path.startsWith('/admin')) {
+        const slug = path.replace(/^\//, '');
+        setCategories(prev => {
+          const match = prev.find(c => c.slug === slug);
+          if (match) {
+            setCurrentPage('category');
+            setActiveCategory(match.name);
+            setActiveCategorySlug(match.slug);
+            setActiveSubcategory(null);
+          }
+          return prev;
+        });
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [activeSubcategory, setActiveSubcategory] = useState(null);
   const [filterMode, setFilterMode] = useState('cielo');
@@ -118,8 +163,8 @@ export default function App() {
   const [expandedCategory, setExpandedCategory] = useState(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newTopicCategory, setNewTopicCategory] = useState(CATEGORY_TREE[0].name);
-  const [newTopicSubcategory, setNewTopicSubcategory] = useState(CATEGORY_TREE[0].subcategories[0]);
+  const [newTopicCategory, setNewTopicCategory] = useState('');
+  const [newTopicSubcategory, setNewTopicSubcategory] = useState('');
   const [newTopicName, setNewTopicName] = useState('');
   const [newProposalTitle, setNewProposalTitle] = useState('');
   const [newProposalDesc, setNewProposalDesc] = useState('');
@@ -1481,75 +1526,126 @@ export default function App() {
         />
       )}
 
-      {/* PÁGINA PRINCIPAL */}
-      {currentPage === 'home' && !selectedProposalForNotes && (
+      {/* PÁGINA PRINCIPAL / CATEGORÍA */}
+      {(currentPage === 'home' || currentPage === 'category') && !selectedProposalForNotes && (
       <main className="max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
         {/* SIDEBAR */}
         <aside className="md:w-64 flex-shrink-0">
           <div className="bg-slate-800/60 rounded-2xl border border-slate-700/50 p-5 sticky top-24 backdrop-blur-sm">
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Categorías</h2>
             <ul className="space-y-1">
-              <li>
-                <button 
-                  onClick={() => {
-                    setActiveCategory('Todas');
-                    setActiveSubcategory(null);
-                    setIsCategoryListOpen(!isCategoryListOpen);
-                  }}
-                  className={`w-full flex justify-between items-center px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-                    activeCategory === 'Todas' 
-                      ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40' 
-                      : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
-                  }`}
-                >
-                  Todas las categorías
-                  <ChevronDown className={`w-4 h-4 transition-transform ${isCategoryListOpen ? 'rotate-180' : ''}`} />
-                </button>
-              </li>
-              
-              {isCategoryListOpen && CATEGORY_TREE.map(cat => (
-                <li key={cat.name} className="ml-2 mt-1">
-                  <button 
-                    onClick={() => {
-                      setActiveCategory(cat.name);
-                      setActiveSubcategory(null);
-                      setExpandedCategory(expandedCategory === cat.name ? null : cat.name);
-                    }}
-                    className={`w-full flex justify-between items-center text-left px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-                      activeCategory === cat.name && !activeSubcategory 
-                        ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40' 
-                        : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
-                    }`}
-                  >
-                    {cat.name}
-                    {cat.subcategories.length > 0 && (
-                      <ChevronDown className={`w-3 h-3 transition-transform ${expandedCategory === cat.name ? 'rotate-180' : ''}`} />
-                    )}
-                  </button>
-                  
-                  {expandedCategory === cat.name && (
-                    <ul className="ml-3 mt-2 space-y-1 border-l-2 border-slate-700 pl-3">
-                      {cat.subcategories.map(sub => (
-                        <li key={sub}>
-                          <button 
-                            onClick={() => {
-                              setActiveCategory(cat.name);
-                              setActiveSubcategory(sub);
-                            }}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition ${
-                              activeSubcategory === sub 
-                                ? 'bg-cyan-600/30 text-cyan-300 font-bold' 
-                                : 'hover:bg-slate-700/50 text-slate-500'
-                            }`}
-                          >
-                            {sub}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
+              {currentPage === 'home' ? (
+                <>
+                  <li>
+                    <button
+                      onClick={() => {
+                        setActiveCategory('Todas');
+                        setActiveSubcategory(null);
+                        setIsCategoryListOpen(!isCategoryListOpen);
+                      }}
+                      className={`w-full flex justify-between items-center px-4 py-2.5 rounded-xl text-sm font-medium transition ${
+                        activeCategory === 'Todas'
+                          ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
+                          : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
+                      }`}
+                    >
+                      Todas las categorías
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isCategoryListOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </li>
+                  {isCategoryListOpen && categories.map(cat => (
+                    <li key={cat.name} className="ml-2 mt-1">
+                      <button
+                        onClick={() => {
+                          history.pushState({}, '', '/' + cat.slug);
+                          setCurrentPage('category');
+                          setActiveCategory(cat.name);
+                          setActiveCategorySlug(cat.slug);
+                          setActiveSubcategory(null);
+                          setExpandedCategory(expandedCategory === cat.name ? null : cat.name);
+                        }}
+                        className={`w-full flex justify-between items-center text-left px-4 py-2.5 rounded-xl text-sm font-medium transition ${
+                          activeCategory === cat.name && !activeSubcategory
+                            ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
+                            : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
+                        }`}
+                      >
+                        {cat.name}
+                        {cat.subcategories.length > 0 && (
+                          <ChevronDown className={`w-3 h-3 transition-transform ${expandedCategory === cat.name ? 'rotate-180' : ''}`} />
+                        )}
+                      </button>
+                      {expandedCategory === cat.name && (
+                        <ul className="ml-3 mt-2 space-y-1 border-l-2 border-slate-700 pl-3">
+                          {cat.subcategories.map(sub => (
+                            <li key={sub}>
+                              <button
+                                onClick={() => {
+                                  setActiveCategory(cat.name);
+                                  setActiveSubcategory(sub);
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition ${
+                                  activeSubcategory === sub
+                                    ? 'bg-cyan-600/30 text-cyan-300 font-bold'
+                                    : 'hover:bg-slate-700/50 text-slate-500'
+                                }`}
+                              >
+                                {sub}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <li>
+                    <button
+                      onClick={() => {
+                        history.pushState({}, '', '/');
+                        setCurrentPage('home');
+                        setActiveCategory('Todas');
+                        setActiveCategorySlug(null);
+                        setActiveSubcategory(null);
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-700/50 text-slate-400 border border-transparent transition"
+                    >
+                      <ArrowLeft className="w-3 h-3" /> Todas las categorías
+                    </button>
+                  </li>
+                  <li className="px-4 py-2">
+                    <span className="text-sm font-bold text-slate-200">{activeCategory}</span>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => setActiveSubcategory(null)}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition ${
+                        !activeSubcategory
+                          ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
+                          : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
+                      }`}
+                    >
+                      Todos los temas
+                    </button>
+                  </li>
+                  {(categories.find(c => c.slug === activeCategorySlug)?.subcategories || []).map(sub => (
+                    <li key={sub}>
+                      <button
+                        onClick={() => setActiveSubcategory(activeSubcategory === sub ? null : sub)}
+                        className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition ${
+                          activeSubcategory === sub
+                            ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
+                            : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
+                        }`}
+                      >
+                        {sub}
+                      </button>
+                    </li>
+                  ))}
+                </>
+              )}
             </ul>
 
           </div>
@@ -1709,12 +1805,12 @@ export default function App() {
                     value={newTopicCategory}
                     onChange={(e) => {
                       setNewTopicCategory(e.target.value);
-                      const subcats = CATEGORY_TREE.find(c => c.name === e.target.value)?.subcategories || [];
+                      const subcats = categories.find(c => c.name === e.target.value)?.subcategories || [];
                       setNewTopicSubcategory(subcats[0] || '');
                     }}
                     className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl p-3 text-sm text-slate-300 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 outline-none"
                   >
-                    {CATEGORY_TREE.map(cat => <option key={cat.name} value={cat.name}>{cat.name}</option>)}
+                    {categories.map(cat => <option key={cat.name} value={cat.name}>{cat.name}</option>)}
                   </select>
                 </div>
                 <div>
@@ -1724,7 +1820,7 @@ export default function App() {
                     onChange={(e) => setNewTopicSubcategory(e.target.value)}
                     className="w-full bg-slate-700/50 border border-slate-600/50 rounded-xl p-3 text-sm text-slate-300 focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 outline-none"
                   >
-                    {CATEGORY_TREE.find(c => c.name === newTopicCategory)?.subcategories.map(sub => (
+                    {(categories.find(c => c.name === newTopicCategory)?.subcategories || []).map(sub => (
                       <option key={sub} value={sub}>{sub}</option>
                     ))}
                   </select>
@@ -1987,7 +2083,7 @@ export default function App() {
       <nav className="fixed inset-x-0 bottom-0 z-40 bg-slate-900/95 border-t border-slate-700/60 backdrop-blur-md">
         <div className="max-w-4xl mx-auto px-4 py-2 flex items-center justify-between gap-2">
           <button
-            onClick={() => setCurrentPage('home')}
+            onClick={() => { history.pushState({}, '', '/'); setCurrentPage('home'); setActiveCategory('Todas'); setActiveCategorySlug(null); setActiveSubcategory(null); }}
             className={`touch-target flex-1 flex flex-col items-center justify-center gap-1 rounded-xl px-2 ${
               currentPage === 'home'
                 ? 'bg-slate-800 text-cyan-400'

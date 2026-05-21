@@ -256,12 +256,194 @@ function ProposalsTab({ token }) {
   );
 }
 
+// ─── Categories ──────────────────────────────────────────────────────────────
+
+function CategoriesTab({ token }) {
+  const [cats, setCats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ name: '', slug: '', subcategories: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', slug: '', subcategories: '' });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { ok, data } = await apiFetch('/api/admin/categories', token);
+    if (ok) setCats(data.categories || []);
+    setLoading(false);
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSaving(true);
+    const subcategories = form.subcategories.split(',').map(s => s.trim()).filter(Boolean);
+    const { ok, data } = await apiFetch('/api/admin/categories', token, {
+      method: 'POST',
+      body: JSON.stringify({ name: form.name, slug: form.slug, subcategories }),
+    });
+    setSaving(false);
+    if (!ok) { setError(data.error || 'Error al crear.'); return; }
+    setForm({ name: '', slug: '', subcategories: '' });
+    setSuccess('Categoría creada.');
+    setTimeout(() => setSuccess(''), 3000);
+    load();
+  };
+
+  const startEdit = (cat) => {
+    setEditingId(cat.id);
+    setEditForm({ name: cat.name, slug: cat.slug, subcategories: cat.subcategories.join(', ') });
+  };
+
+  const handleUpdate = async (id) => {
+    setError('');
+    setSaving(true);
+    const subcategories = editForm.subcategories.split(',').map(s => s.trim()).filter(Boolean);
+    const { ok, data } = await apiFetch(`/api/admin/categories/${id}`, token, {
+      method: 'PUT',
+      body: JSON.stringify({ name: editForm.name, slug: editForm.slug, subcategories }),
+    });
+    setSaving(false);
+    if (!ok) { setError(data.error || 'Error al actualizar.'); return; }
+    setEditingId(null);
+    load();
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('¿Eliminar esta categoría?')) return;
+    setDeleting(id);
+    await apiFetch(`/api/admin/categories/${id}`, token, { method: 'DELETE' });
+    setCats(prev => prev.filter(c => c.id !== id));
+    setDeleting(null);
+  };
+
+  if (loading) return <p className="text-slate-500 text-sm py-8 text-center">Cargando...</p>;
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-slate-800/50 border border-slate-700/40 rounded-xl p-5">
+        <h3 className="text-sm font-bold text-slate-300 mb-4">Nueva categoría</h3>
+        {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
+        {success && <p className="text-emerald-400 text-xs mb-3">{success}</p>}
+        <form onSubmit={handleCreate} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Nombre</label>
+              <input
+                type="text"
+                required
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Ej: Economía"
+                className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 text-sm placeholder-slate-500 outline-none focus:border-red-500/50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Slug (URL)</label>
+              <input
+                type="text"
+                required
+                value={form.slug}
+                onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                placeholder="Ej: economia"
+                className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 text-sm placeholder-slate-500 outline-none focus:border-red-500/50"
+              />
+              <p className="text-xs text-slate-500 mt-1">Solo letras, números y guiones</p>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Subcategorías (separadas por coma)</label>
+            <input
+              type="text"
+              value={form.subcategories}
+              onChange={e => setForm(f => ({ ...f, subcategories: e.target.value }))}
+              placeholder="Ej: Moneda, Inflación, Impuestos"
+              className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 text-sm placeholder-slate-500 outline-none focus:border-red-500/50"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-60 text-white font-bold rounded-lg text-sm transition"
+          >
+            {saving ? 'Guardando...' : 'Crear categoría'}
+          </button>
+        </form>
+      </div>
+
+      <div className="space-y-2">
+        {cats.length === 0 ? (
+          <p className="text-slate-500 text-sm text-center py-4">No hay categorías.</p>
+        ) : cats.map(cat => (
+          <div key={cat.id} className="bg-slate-800/50 border border-slate-700/40 rounded-xl px-4 py-3">
+            {editingId === cat.id ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={editForm.name}
+                    onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                    className="px-3 py-1.5 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 text-sm outline-none"
+                    placeholder="Nombre"
+                  />
+                  <input
+                    value={editForm.slug}
+                    onChange={e => setEditForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                    className="px-3 py-1.5 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 text-sm outline-none"
+                    placeholder="Slug"
+                  />
+                </div>
+                <input
+                  value={editForm.subcategories}
+                  onChange={e => setEditForm(f => ({ ...f, subcategories: e.target.value }))}
+                  className="w-full px-3 py-1.5 bg-slate-700/50 border border-slate-600/50 rounded-lg text-slate-200 text-sm outline-none"
+                  placeholder="Subcategorías separadas por coma"
+                />
+                <div className="flex gap-2">
+                  <button onClick={() => handleUpdate(cat.id)} disabled={saving} className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition disabled:opacity-50">
+                    {saving ? '...' : 'Guardar'}
+                  </button>
+                  <button onClick={() => setEditingId(null)} className="px-3 py-1.5 bg-slate-700/60 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg transition">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-200 text-sm font-semibold">{cat.name}</p>
+                  <p className="text-xs text-slate-500">/{cat.slug} · {cat.subcategories.join(', ') || 'Sin subcategorías'}</p>
+                </div>
+                <button onClick={() => startEdit(cat)} className="flex-shrink-0 text-xs px-3 py-1.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 text-slate-300 rounded-lg transition">
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(cat.id)}
+                  disabled={deleting === cat.id}
+                  className="flex-shrink-0 text-xs px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 border border-red-700/40 text-red-400 rounded-lg transition disabled:opacity-50"
+                >
+                  {deleting === cat.id ? '...' : 'Eliminar'}
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 const TABS = [
   { key: 'users', label: 'Usuarios' },
   { key: 'topics', label: 'Temas' },
   { key: 'proposals', label: 'Propuestas' },
+  { key: 'categories', label: 'Categorías' },
 ];
 
 function Dashboard({ token, onLogout }) {
@@ -301,6 +483,7 @@ function Dashboard({ token, onLogout }) {
         {tab === 'users' && <UsersTab token={token} />}
         {tab === 'topics' && <TopicsTab token={token} />}
         {tab === 'proposals' && <ProposalsTab token={token} />}
+        {tab === 'categories' && <CategoriesTab token={token} />}
       </main>
     </div>
   );

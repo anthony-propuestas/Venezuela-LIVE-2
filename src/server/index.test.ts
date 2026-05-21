@@ -263,3 +263,126 @@ describe('POST /api/topics', () => {
     expect(mockBatch).toHaveBeenCalledOnce();
   });
 });
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+
+const mockRunCat = vi.fn().mockResolvedValue({ meta: { last_row_id: 42 } });
+const mockPrepareCat = {
+  bind: vi.fn().mockReturnThis(),
+  all: vi.fn().mockResolvedValue({ results: [] }),
+  run: mockRunCat,
+};
+const categoriesEnv = {
+  DEV_BYPASS_ALLOWED: 'true',
+  ALLOWLIST_EMAILS: '',
+  DB: { prepare: vi.fn().mockReturnValue(mockPrepareCat) },
+  R2_BUCKET: {} as unknown,
+  CRON_SECRET: 'test-secret',
+  ASSETS: {} as unknown,
+  ADMIN_EMAIL,
+  ADMIN_PASSWORD,
+} as unknown as Env;
+
+describe('GET /api/categories', () => {
+  it('sin auth → 401', async () => {
+    const res = await app.request('/api/categories', {}, noAuthEnv);
+    expect(res.status).toBe(401);
+  });
+
+  it('con dev bypass → 200 con array de categorías', async () => {
+    const res = await app.request(
+      '/api/categories',
+      { headers: { Authorization: 'Bearer __dev_bypass__' } },
+      categoriesEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { categories: unknown[] };
+    expect(Array.isArray(body.categories)).toBe(true);
+  });
+});
+
+describe('Admin categories routes', () => {
+  let adminToken: string;
+
+  beforeEach(async () => {
+    adminToken = await signAdminToken(ADMIN_PASSWORD);
+    mockRunCat.mockClear();
+  });
+
+  it('GET /api/admin/categories sin Authorization → 401', async () => {
+    const res = await app.request('/api/admin/categories', {}, categoriesEnv);
+    expect(res.status).toBe(401);
+  });
+
+  it('GET /api/admin/categories con token válido → 200', async () => {
+    const res = await app.request(
+      '/api/admin/categories',
+      { headers: { Authorization: `Bearer ${adminToken}` } },
+      categoriesEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { categories: unknown[] };
+    expect(Array.isArray(body.categories)).toBe(true);
+  });
+
+  it('POST /api/admin/categories sin name → 400', async () => {
+    const res = await app.request(
+      '/api/admin/categories',
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: 'economia' }),
+      },
+      categoriesEnv,
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /api/admin/categories body válido → 200 con id', async () => {
+    const res = await app.request(
+      '/api/admin/categories',
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Economía', slug: 'economia', subcategories: ['Inflación'] }),
+      },
+      categoriesEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; id: number };
+    expect(body.ok).toBe(true);
+    expect(typeof body.id).toBe('number');
+    expect(mockRunCat).toHaveBeenCalledOnce();
+  });
+
+  it('PUT /api/admin/categories/:id con token válido → 200', async () => {
+    const res = await app.request(
+      '/api/admin/categories/1',
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Economía', slug: 'economia', subcategories: [] }),
+      },
+      categoriesEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
+    expect(mockRunCat).toHaveBeenCalledOnce();
+  });
+
+  it('DELETE /api/admin/categories/:id con token válido → 200', async () => {
+    const res = await app.request(
+      '/api/admin/categories/1',
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      },
+      categoriesEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
+    expect(mockRunCat).toHaveBeenCalledOnce();
+  });
+});

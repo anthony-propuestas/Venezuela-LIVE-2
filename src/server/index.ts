@@ -331,6 +331,19 @@ app.get('/api/topics', async (c) => {
   return c.json({ threads });
 });
 
+/** Lista todas las categorías. */
+app.get('/api/categories', async (c) => {
+  const db = c.env.DB;
+  const rows = await db
+    .prepare('SELECT id, name, slug, subcategories FROM categories ORDER BY name ASC')
+    .all<{ id: number; name: string; slug: string; subcategories: string }>();
+  const categories = rows.results.map(r => ({
+    ...r,
+    subcategories: JSON.parse(r.subcategories || '[]') as string[],
+  }));
+  return c.json({ categories });
+});
+
 /** Crear nuevo tema con propuesta inicial. Zero Trust: autor desde perfil, nunca desde body. */
 app.post('/api/topics', async (c) => {
   const { userId, name: jwtName } = c.get('user');
@@ -729,6 +742,59 @@ app.delete('/api/admin/proposals/:proposalId', async (c) => {
     db.prepare('DELETE FROM proposal_notes WHERE proposal_id = ?').bind(proposalId),
     db.prepare('DELETE FROM proposals WHERE id = ?').bind(proposalId),
   ]);
+  return c.json({ ok: true });
+});
+
+app.get('/api/admin/categories', async (c) => {
+  const db = c.env.DB;
+  const rows = await db
+    .prepare('SELECT id, name, slug, subcategories, created_at FROM categories ORDER BY name ASC')
+    .all<{ id: number; name: string; slug: string; subcategories: string; created_at: string }>();
+  const categories = rows.results.map(r => ({ ...r, subcategories: JSON.parse(r.subcategories || '[]') as string[] }));
+  return c.json({ categories });
+});
+
+app.post('/api/admin/categories', async (c) => {
+  const db = c.env.DB;
+  let body: { name?: string; slug?: string; subcategories?: string[] };
+  try { body = await c.req.json(); } catch { return c.json({ error: 'Datos inválidos.' }, 400); }
+  const name = String(body?.name ?? '').trim();
+  const slug = String(body?.slug ?? '').trim().toLowerCase();
+  const subcategories = Array.isArray(body?.subcategories) ? body.subcategories.map(s => String(s).trim()).filter(Boolean) : [];
+  if (!name || !slug) return c.json({ error: 'name y slug son requeridos.' }, 400);
+  if (!/^[a-z0-9-]+$/.test(slug)) return c.json({ error: 'El slug solo puede contener letras minúsculas, números y guiones.' }, 400);
+  try {
+    const result = await db.prepare('INSERT INTO categories (name, slug, subcategories) VALUES (?, ?, ?)').bind(name, slug, JSON.stringify(subcategories)).run();
+    return c.json({ ok: true, id: result.meta.last_row_id });
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message?.includes('UNIQUE')) return c.json({ error: 'El slug ya existe.' }, 409);
+    throw e;
+  }
+});
+
+app.put('/api/admin/categories/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  let body: { name?: string; slug?: string; subcategories?: string[] };
+  try { body = await c.req.json(); } catch { return c.json({ error: 'Datos inválidos.' }, 400); }
+  const name = String(body?.name ?? '').trim();
+  const slug = String(body?.slug ?? '').trim().toLowerCase();
+  const subcategories = Array.isArray(body?.subcategories) ? body.subcategories.map(s => String(s).trim()).filter(Boolean) : [];
+  if (!name || !slug) return c.json({ error: 'name y slug son requeridos.' }, 400);
+  if (!/^[a-z0-9-]+$/.test(slug)) return c.json({ error: 'El slug solo puede contener letras minúsculas, números y guiones.' }, 400);
+  try {
+    await db.prepare('UPDATE categories SET name = ?, slug = ?, subcategories = ? WHERE id = ?').bind(name, slug, JSON.stringify(subcategories), id).run();
+    return c.json({ ok: true });
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message?.includes('UNIQUE')) return c.json({ error: 'El slug ya existe.' }, 409);
+    throw e;
+  }
+});
+
+app.delete('/api/admin/categories/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  await db.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
   return c.json({ ok: true });
 });
 

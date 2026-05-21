@@ -244,6 +244,11 @@ export async function getTopics() {
   return apiFetch('/api/topics');
 }
 
+/** Obtiene todas las categorías con sus subcategorías. */
+export async function getCategories() {
+  return apiFetch('/api/categories');
+}
+
 /**
  * Crea un nuevo tema con propuesta inicial.
  * Zero Trust: el autor se deriva en el backend desde el perfil.

@@ -70,8 +70,14 @@ El middleware `createAuthMiddleware()` verifica el JWT de Google con JWKS. El `u
 
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
+| `GET` | `/api/categories` | ninguna | Lista todas las categorías con subcategorías |
 | `GET` | `/api/topics` | ninguna | Lista todos los temas con propuestas y notas |
 | `POST` | `/api/topics` | Bearer token | Crea un tema con su propuesta inicial |
+
+**GET /api/categories — respuesta:**
+```json
+{ "categories": [{ "id": 1, "name": "Economía", "slug": "economia", "subcategories": ["Moneda","Inflación","Impuestos"] }] }
+```
 
 **GET /api/topics — respuesta:**
 ```json
@@ -219,6 +225,16 @@ Requieren `Authorization: Bearer <admin_jwt>` salvo el endpoint de login.
 | `DELETE` | `/api/admin/topics/:topicId` | Admin JWT | Elimina tema + sus propuestas + notas en cascada |
 | `GET` | `/api/admin/proposals` | Admin JWT | Últimas 200 propuestas |
 | `DELETE` | `/api/admin/proposals/:proposalId` | Admin JWT | Elimina propuesta + sus notas en cascada |
+| `GET` | `/api/admin/categories` | Admin JWT | Lista todas las categorías |
+| `POST` | `/api/admin/categories` | Admin JWT | Crea categoría |
+| `PUT` | `/api/admin/categories/:id` | Admin JWT | Actualiza categoría |
+| `DELETE` | `/api/admin/categories/:id` | Admin JWT | Elimina categoría |
+
+**POST/PUT /api/admin/categories — body:**
+```json
+{ "name": "string", "slug": "string (a-z0-9-)", "subcategories": ["string"] }
+```
+Errores: `400` si falta `name` o `slug`; `409` si el slug ya existe.
 
 **POST /api/admin/login — body:**
 ```json

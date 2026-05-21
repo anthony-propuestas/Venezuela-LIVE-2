@@ -25,6 +25,7 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | A3 | Header `Authorization: Bearer <token>` requerido en todas las rutas protegidas | ✅ |
 | A4 | Modo dev con `DEV_BYPASS_ALLOWED=true` + `Bearer __dev_bypass__` inyecta usuario `dev-bypass-user` (role: `user`) | ✅ |
 | A8 | `GET /api/profile/photo` documentado con respuesta (Content-Type, Cache-Control, 404 si no hay foto) | ✅ |
+| A9 | Endpoints de categorías documentados: `GET /api/categories` (público) + admin CRUD (`GET/POST/PUT/DELETE /api/admin/categories/:id`) | ✅ |
 | A5 | Cron endpoints usan header `X-Cron-Secret` (no `Authorization`) | ✅ |
 | A6 | Límites de subida de foto: 2 MB máximo, solo JPG/PNG/WebP | ✅ |
 | A7 | Campos de respuesta de cada endpoint coinciden con los ejemplos en docs | ✅ |
@@ -37,7 +38,7 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 
 | # | Verificar | Estado |
 |---|-----------|--------|
-| B1 | Número de archivos en `migrations/` coincide con los documentados (docs dice 0001–0010) | ✅ |
+| B1 | Número de archivos en `migrations/` coincide con los documentados (docs dice 0001–0011) | ✅ |
 | B2 | Tabla `profiles` tiene columnas: `id`, `email`, `display_name`, `username`, `is_premium`, `role`, `ideologies` (JSON en TEXT) | ✅ |
 | B3 | Tabla `proposals` existe con las columnas documentadas | ✅ |
 | B4 | Tabla `achievements` y `user_achievements` existen | ✅ |
@@ -46,6 +47,7 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | B7 | Restricción UNIQUE en `profiles.email` (migración 0009) | ✅ |
 | B8 | Formato de KV key: `rl:<YYYY-MM-DD>:<userId>:<action>` | ✅ |
 | B9 | Paths de R2: `profiles/<userId>/photo.<ext>` para fotos de perfil | ✅ |
+| B10 | Tabla `categories` tiene columnas: `id`, `name`, `slug`, `subcategories` (TEXT JSON default `'[]'`), `created_at` (migración 0011) | ✅ |
 
 **Cómo verificar:** Lee los archivos `.sql` en `migrations/` y compara con las tablas descritas en `docs/DATABASE.md`.
 
@@ -112,6 +114,7 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | F4 | Existe al menos un archivo `.test.` en `src/client/` que cubre `typewriterStep()` | ✅ |
 | F5 | El puerto en los ejemplos `curl` de cron coincide con el servidor de dev (`dev:worker` usa 8787, `dev:pages` usa otro puerto) | ✅ |
 | F6 | Los pasos del "full manual test flow" reflejan el estado actual de la app (no menciona features eliminadas) | ✅ |
+| F7 | `index.test.ts` cubre rutas de categorías: `GET /api/categories` con dev bypass, admin CRUD con y sin auth | ✅ |
 
 **Cómo verificar:** Lee `package.json`, lista archivos `.test.jsx/.ts` en `src/`, verifica puerto en ejemplos curl vs scripts de dev.
 
@@ -137,6 +140,10 @@ Llena esta tabla con cada ❌ del checklist. Si no hay discrepancias, deja la ta
 | 12 | Security | D2 | `localStorage` key documentada como `vl_session` en SECURITY.md y CONFIGURATION.md | Código usa `venlive_session_v1` (`session.js:5`, `session.test.js:4`) | Fix docs | — |
 | 13 | Security | D1/D2 | Checklist decía "NUNCA en localStorage" y listaba solo 2 keys | `session.js` persiste a localStorage cuando `VITE_PERSIST_SESSIONS=true` (key `venlive_session_v1`) | Fix workflow | — |
 | 14 | Testing | F4 | TESTING.md listaba 3 archivos de test | Existe `src/client/auth/session.test.js` (sesión en memoria y localStorage) | Fix docs | — |
+| 15 | DB | B1 | Checklist decía "docs dice 0001–0010" | DATABASE.md ya refleja `0001–0011` | Fix workflow | — |
+| 16 | DB | B10 (nuevo) | Ítem de checklist faltante para tabla `categories` | DATABASE.md documenta la tabla con columnas correctas | Fix workflow | — |
+| 17 | API | A9 (nuevo) | Ítem de checklist faltante para endpoints de categorías | API.md documenta `GET /api/categories` + admin CRUD completo | Fix workflow | — |
+| 18 | Testing | F7 | `index.test.ts` cubre categorías pero TESTING.md no lo mencionaba | `index.test.ts` incluye suite de categorías (GET público + admin CRUD con/sin auth) | Fix docs | — |
 
 **Tipos de acción:**
 - `Fix docs` — el código es correcto, actualizar la documentación
@@ -159,3 +166,4 @@ El workflow está completo cuando:
 | 2026-05-21 | Claude Code | 6 (A4×2, B8, B9, E2, F) | Resueltas: Fix docs en API.md, DATABASE.md, TESTING.md (×2); Fix código creando `.dev.vars.example`; Fix workflow B9 |
 | 2026-05-21 | Claude Code | 5 (A8, D8, D9, D10, E7) | Resueltas: Fix docs en API.md (GET /profile/photo), SECURITY.md (ALLOWLIST_EMAILS, rutas cron excluidas, excepción JWT admin), CONFIGURATION.md (ALLOWLIST_EMAILS) |
 | 2026-05-21 | Claude Code | 3 (D2 key name, D1/D2 session persistence, F4 session.test.js) | Resueltas: Fix docs en SECURITY.md + CONFIGURATION.md (key `vl_session`→`venlive_session_v1`), TESTING.md (nuevo test), Fix workflow D1/D2 |
+| 2026-05-21 | Claude Code | 4 (B1, B10, A9, F7) | Resueltas: Fix workflow B1/B10/A9 (checklist actualizado para migration 0011 y feature categories — docs ya estaban correctos); Fix docs TESTING.md (description de index.test.ts menciona categorías) |

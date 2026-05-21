@@ -86,6 +86,19 @@ CREATE TABLE achievements (
 );
 ```
 
+#### `categories` (migración 0011)
+Categorías de debate gestionadas desde el panel admin.
+
+```sql
+CREATE TABLE categories (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  name           TEXT NOT NULL,
+  slug           TEXT NOT NULL UNIQUE,  -- a-z0-9-, URL path de la categoría
+  subcategories  TEXT NOT NULL DEFAULT '[]',  -- JSON array serializado
+  created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+```
+
 #### `user_achievements` (migración 0006)
 Logros desbloqueados por usuario.
 
@@ -96,7 +109,7 @@ Tickets de pago enviados por usuarios para activación premium.
 
 ## Migraciones
 
-Las migraciones están en `migrations/` numeradas `0001`–`0010`. Se aplican en orden.
+Las migraciones están en `migrations/` numeradas `0001`–`0011`. Se aplican en orden.
 
 **Aplicar en local:**
 ```bash
