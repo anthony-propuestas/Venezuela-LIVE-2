@@ -5,13 +5,12 @@ import { useError } from '@client/context/ErrorContext';
 import * as api from '@client/services/api.service';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
-  ThumbsUp, 
-  ThumbsDown, 
-  MessageSquare, 
-  AlertTriangle, 
-  FileText, 
-  TrendingUp, 
-  TrendingDown, 
+  ThumbsUp,
+  ThumbsDown,
+  AlertTriangle,
+  FileText,
+  TrendingUp,
+  TrendingDown,
   Activity,
   PlusCircle,
   ShieldAlert,
@@ -23,7 +22,6 @@ import {
   X,
   Clock,
   BarChart3,
-  Menu,
   Settings,
   Heart,
   Users,
@@ -758,116 +756,78 @@ export default function App() {
     })();
 
     return (
-      <div className={`p-5 rounded-2xl border-2 transition-all duration-200 ${
-        isKing 
-          ? 'bg-slate-700/60 border-slate-500/70 shadow-lg shadow-slate-900/30' 
-          : 'bg-slate-700/40 border-slate-600/50 mt-3'
-      }`}>
-        {isKing && (
-          <div className="flex items-center gap-2 mb-3 text-xs font-bold text-amber-400 uppercase tracking-wider">
-            <span>👑 Propuesta Principal (Rey de la Colina)</span>
-          </div>
-        )}
-        
-        <h3 className={`text-slate-200 font-bold mb-2 ${isKing ? 'text-xl' : 'text-lg'}`}>
+      <div className={`py-3 transition ${!isKing ? 'border-l-2 border-slate-700/60 pl-3 ml-1 mt-2' : ''}`}>
+        {isKing && <p className="text-xs text-amber-400/60 mb-1">👑 Rey de la Colina</p>}
+
+        <h3 className="text-[15px] font-semibold text-slate-200 leading-snug">
           {proposal.title}
         </h3>
-        
-        <p className={`text-slate-400 mb-4 leading-relaxed ${isKing ? 'text-base' : 'text-sm'}`}>
+
+        <p className="text-sm text-slate-400 leading-relaxed mt-1">
           {proposal.description}
         </p>
 
-        <div className="flex items-center gap-2 mb-4">
-          <span className="bg-slate-600/80 text-slate-300 px-3 py-1 rounded-lg text-xs font-semibold border border-slate-500/50">
-            ✍️ {proposal.author}
-          </span>
-        </div>
+        <p className="text-xs text-slate-500 mt-1">✍️ {proposal.author}</p>
 
-        {/* Notas de la Comunidad - Compacto */}
-        <div className="mt-4 flex items-center gap-2">
-          {topNote && topNote.netScore > 0 && (
-            <div className="flex-grow p-2.5 bg-sky-900/30 border border-sky-500/40 rounded-xl flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-sky-400 flex-shrink-0" />
-              <p className="text-xs text-sky-300 truncate">
-                <span className="md:hidden">{topNote.text.substring(0, 30)}{topNote.text.length > 30 ? '...' : ''}</span>
-                <span className="hidden md:inline">{topNote.text.substring(0, 50)}{topNote.text.length > 50 ? '...' : ''}</span>
-              </p>
-            </div>
-          )}
-          <button 
-            onClick={() => {
-              setSelectedProposalForNotes({ threadId, proposalId: proposal.id, notes: proposal.notes || [] });
-            }}
-            className="flex items-center gap-1.5 px-3 py-2.5 bg-sky-900/30 hover:bg-sky-900/50 border border-sky-500/40 text-sky-400 rounded-xl text-xs font-bold transition flex-shrink-0"
-            title="Ver notas de la comunidad"
+        {/* Nota destacada */}
+        {topNote && topNote.netScore > 0 && (
+          <div className="mt-2 flex items-start gap-1.5 p-2 border border-sky-500/30 rounded-lg bg-sky-900/20">
+            <ShieldAlert className="w-3.5 h-3.5 text-sky-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-sky-300 line-clamp-2">{topNote.text.substring(0, 80)}{topNote.text.length > 80 ? '...' : ''}</p>
+          </div>
+        )}
+
+        {/* Fila de acciones estilo X */}
+        <div className="flex items-center gap-5 mt-3 text-slate-500">
+          <span className={`text-xs font-bold flex items-center gap-0.5 ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
+            {isNegative ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+            {proposal.netScore > 0 ? '+' : ''}{proposal.netScore}
+          </span>
+
+          <button
+            onClick={() => handleVote(threadId, proposal.id, true)}
+            disabled={!canVote && currentVote !== null}
+            className={`flex items-center gap-1.5 text-sm transition ${
+              currentVote === 'up' ? 'text-emerald-400' : !canVote && currentVote !== null ? 'text-slate-600 cursor-not-allowed' : 'hover:text-emerald-400'
+            }`}
+            title={!canVote && currentVote !== null ? 'Ya votaste esta semana' : 'Apoyar'}
+          >
+            <ThumbsUp className={`w-4 h-4 ${currentVote === 'up' ? 'fill-emerald-400' : ''}`} />
+            <span>{proposal.upvotes}</span>
+          </button>
+
+          <button
+            onClick={() => handleVote(threadId, proposal.id, false)}
+            disabled={!canVote && currentVote !== null}
+            className={`flex items-center gap-1.5 text-sm transition ${
+              currentVote === 'down' ? 'text-red-400' : !canVote && currentVote !== null ? 'text-slate-600 cursor-not-allowed' : 'hover:text-red-400'
+            }`}
+            title={!canVote && currentVote !== null ? 'Ya votaste esta semana' : 'Rechazar'}
+          >
+            <ThumbsDown className={`w-4 h-4 ${currentVote === 'down' ? 'fill-red-400' : ''}`} />
+            <span>{proposal.downvotes}</span>
+          </button>
+
+          <button
+            onClick={() => setShowComments(!showComments)}
+            className="flex items-center gap-1.5 text-sm hover:text-cyan-400 transition"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>{proposal.comments?.length || 0}</span>
+          </button>
+
+          <button
+            onClick={() => setSelectedProposalForNotes({ threadId, proposalId: proposal.id, notes: proposal.notes || [] })}
+            className="flex items-center gap-1.5 text-sm hover:text-sky-400 transition"
+            title="Notas de la comunidad"
           >
             <Shield className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <div className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-sm ${
-            isNegative 
-              ? 'bg-red-900/40 text-red-400 border border-red-700/50' 
-              : 'bg-emerald-900/40 text-emerald-400 border border-emerald-700/50'
-          }`}>
-            {isNegative ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-            <span>{proposal.netScore > 0 ? '+' : ''}{proposal.netScore} Neto</span>
-          </div>
-
-          <div className="flex items-center gap-0 border-2 border-slate-500/50 rounded-xl overflow-hidden bg-slate-800/50">
-            <button 
-              onClick={() => handleVote(threadId, proposal.id, true)}
-              disabled={!canVote && currentVote !== null}
-              className={`touch-target flex items-center gap-1.5 px-4 py-2 transition ${
-                currentVote === 'up' 
-                  ? 'bg-emerald-900/50 text-emerald-400' 
-                  : !canVote && currentVote !== null
-                    ? 'text-slate-600 cursor-not-allowed'
-                    : 'text-slate-400 hover:bg-emerald-900/30 hover:text-emerald-400'
-              }`}
-              title={!canVote && currentVote !== null ? 'Ya votaste esta semana' : 'Apoyar'}
-            >
-              <ThumbsUp className={`w-4 h-4 ${currentVote === 'up' ? 'fill-emerald-400' : ''}`} />
-              <span className="text-sm font-semibold">{proposal.upvotes}</span>
-            </button>
-            <div className="w-px h-6 bg-slate-500/50"></div>
-            <button 
-              onClick={() => handleVote(threadId, proposal.id, false)}
-              disabled={!canVote && currentVote !== null}
-              className={`touch-target flex items-center gap-1.5 px-4 py-2 transition ${
-                currentVote === 'down' 
-                  ? 'bg-red-900/50 text-red-400' 
-                  : !canVote && currentVote !== null
-                    ? 'text-slate-600 cursor-not-allowed'
-                    : 'text-slate-400 hover:bg-red-900/30 hover:text-red-400'
-              }`}
-              title={!canVote && currentVote !== null ? 'Ya votaste esta semana' : 'Rechazar'}
-            >
-              <ThumbsDown className={`w-4 h-4 ${currentVote === 'down' ? 'fill-red-400' : ''}`} />
-              <span className="text-sm font-semibold">{proposal.downvotes}</span>
-            </button>
-          </div>
-
-          <button 
-            onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-600/50 hover:text-slate-300 transition border border-slate-600/50"
-            title="Comentarios"
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span className="text-sm font-semibold">{proposal.comments?.length || 0}</span>
-          </button>
-
-          {!isKing && (
-            <span className="text-xs text-slate-500 font-semibold ml-auto uppercase tracking-wide">
-              Retador
-            </span>
-          )}
-        </div>
-
         {showComments && (
-          <div className="mt-5 pt-5 border-t border-slate-600/50">
-            <div className="space-y-3 mb-4 max-h-60 overflow-y-auto pr-2">
+          <div className="mt-4 pt-4 border-t border-slate-800/50">
+            <div className="space-y-2 mb-4 max-h-60 overflow-y-auto pr-2">
               {(proposal.comments || []).length === 0 ? (
                 <p className="text-sm text-slate-500 italic">No hay comentarios aún. ¡Sé el primero!</p>
               ) : (
@@ -962,46 +922,173 @@ export default function App() {
     return <Login setEstaAutenticado={setEstaAutenticado} />;
   }
 
-  return (
-    <div className="min-h-screen bg-black text-slate-300 font-sans pb-20">
-      {/* HEADER */}
-      <header className="bg-slate-800/90 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <img src="https://flagcdn.com/w40/ve.png" alt="Venezuela" className="w-8 h-6 object-cover rounded-sm" />
-            <h1 className="text-h1 font-extrabold tracking-tight">
-              <span className="text-yellow-400">VEN</span><span className="text-blue-500">EZU</span><span className="text-red-500">ELA</span> <span className="text-white">LIVE</span>
-            </h1>
+  const LeftSidebar = (
+    <aside className="hidden md:flex flex-col md:w-[88px] lg:w-[275px] border-r border-slate-800/50 sticky top-0 h-screen overflow-y-auto shrink-0 z-30">
+      {/* Logo */}
+      <div className="p-4 lg:px-6 flex items-center">
+        <button
+          onClick={() => { history.pushState({}, '', '/'); setCurrentPage('home'); setActiveCategory('Todas'); setActiveCategorySlug(null); setActiveSubcategory(null); }}
+          className="flex items-center gap-3 hover:opacity-80 transition"
+        >
+          <img src="https://flagcdn.com/w40/ve.png" alt="Venezuela" className="w-8 h-6 object-cover rounded-sm shrink-0" />
+          <h1 className="hidden lg:block text-h1 font-extrabold tracking-tight">
+            <span className="text-yellow-400">VEN</span><span className="text-blue-500">EZU</span><span className="text-red-500">ELA</span> <span className="text-white">LIVE</span>
+          </h1>
+        </button>
+      </div>
+
+      {/* Nav items */}
+      <nav className="flex-none px-2 lg:px-3 space-y-1 mt-2">
+        <button
+          onClick={() => { history.pushState({}, '', '/'); setCurrentPage('home'); setActiveCategory('Todas'); setActiveCategorySlug(null); setActiveSubcategory(null); }}
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition text-left ${currentPage === 'home' ? 'font-bold text-white bg-slate-900/70' : 'text-slate-400 hover:bg-slate-900/50'}`}
+          title="Inicio"
+        >
+          <Activity className="w-6 h-6 shrink-0" />
+          <span className="hidden lg:inline text-[17px]">Inicio</span>
+        </button>
+        <button
+          onClick={() => setCurrentPage('general')}
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition text-left ${currentPage === 'general' ? 'font-bold text-white bg-slate-900/70' : 'text-slate-400 hover:bg-slate-900/50'}`}
+          title="General"
+        >
+          <BarChart3 className="w-6 h-6 shrink-0" />
+          <span className="hidden lg:inline text-[17px]">General</span>
+        </button>
+        <button
+          onClick={() => setCurrentPage('perfil')}
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition text-left ${currentPage === 'perfil' ? 'font-bold text-white bg-slate-900/70' : 'text-slate-400 hover:bg-slate-900/50'}`}
+          title="Perfil"
+        >
+          <User className="w-6 h-6 shrink-0" />
+          <span className="hidden lg:inline text-[17px]">Perfil</span>
+        </button>
+        <button
+          onClick={() => setCurrentPage('premium')}
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition text-left ${currentPage === 'premium' ? 'font-bold text-amber-400 bg-slate-900/70' : 'text-slate-400 hover:bg-slate-900/50'}`}
+          title="Premium"
+        >
+          <Crown className="w-6 h-6 shrink-0" />
+          <span className="hidden lg:inline text-[17px]">Premium</span>
+        </button>
+        <button
+          onClick={() => { clearAuth(); setEstaAutenticado(false); }}
+          className="w-full flex items-center gap-4 px-3 py-3 rounded-full transition text-left text-slate-500 hover:bg-red-900/20 hover:text-red-400"
+          title="Salir"
+        >
+          <LogOut className="w-6 h-6 shrink-0" />
+          <span className="hidden lg:inline text-[17px]">Salir</span>
+        </button>
+
+        {/* Nuevo Tema */}
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="w-full flex items-center justify-center lg:justify-start gap-4 mt-2 px-3 py-3 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold transition"
+          title="Nuevo Tema"
+        >
+          <PlusCircle className="w-6 h-6 shrink-0" />
+          <span className="hidden lg:inline text-[17px]">Nuevo Tema</span>
+        </button>
+      </nav>
+
+      {/* Categorías — solo lg */}
+      <div className="hidden lg:block px-3 mt-6 border-t border-slate-800/50 pt-4 flex-1 overflow-y-auto">
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-1">Categorías</h2>
+        <ul className="space-y-1">
+          {currentPage === 'home' ? (
+            <>
+              <li>
+                <button
+                  onClick={() => { setActiveCategory('Todas'); setActiveSubcategory(null); setIsCategoryListOpen(!isCategoryListOpen); }}
+                  className={`w-full flex justify-between items-center px-3 py-2 rounded-xl text-sm font-medium transition ${activeCategory === 'Todas' ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40' : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'}`}
+                >
+                  Todas las categorías
+                  <ChevronDown className={`w-4 h-4 transition-transform ${isCategoryListOpen ? 'rotate-180' : ''}`} />
+                </button>
+              </li>
+              {isCategoryListOpen && categories.map(cat => (
+                <li key={cat.name} className="ml-2 mt-1">
+                  <button
+                    onClick={() => { history.pushState({}, '', '/' + cat.slug); setCurrentPage('category'); setActiveCategory(cat.name); setActiveCategorySlug(cat.slug); setActiveSubcategory(null); setExpandedCategory(expandedCategory === cat.name ? null : cat.name); }}
+                    className={`w-full flex justify-between items-center text-left px-3 py-2 rounded-xl text-sm font-medium transition ${activeCategory === cat.name && !activeSubcategory ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40' : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'}`}
+                  >
+                    {cat.name}
+                    {cat.subcategories.length > 0 && <ChevronDown className={`w-3 h-3 transition-transform ${expandedCategory === cat.name ? 'rotate-180' : ''}`} />}
+                  </button>
+                  {expandedCategory === cat.name && (
+                    <ul className="ml-3 mt-1 space-y-1 border-l-2 border-slate-700 pl-3">
+                      {cat.subcategories.map(sub => (
+                        <li key={sub}>
+                          <button
+                            onClick={() => { setActiveCategory(cat.name); setActiveSubcategory(sub); }}
+                            className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium transition ${activeSubcategory === sub ? 'bg-cyan-600/30 text-cyan-300 font-bold' : 'hover:bg-slate-700/50 text-slate-500'}`}
+                          >
+                            {sub}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </>
+          ) : (
+            <>
+              <li>
+                <button
+                  onClick={() => { history.pushState({}, '', '/'); setCurrentPage('home'); setActiveCategory('Todas'); setActiveCategorySlug(null); setActiveSubcategory(null); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium hover:bg-slate-700/50 text-slate-400 border border-transparent transition"
+                >
+                  <ArrowLeft className="w-3 h-3" /> Todas las categorías
+                </button>
+              </li>
+              <li className="px-3 py-1">
+                <span className="text-sm font-bold text-slate-200">{activeCategory}</span>
+              </li>
+              <li>
+                <button
+                  onClick={() => setActiveSubcategory(null)}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition ${!activeSubcategory ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40' : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'}`}
+                >
+                  Todos los temas
+                </button>
+              </li>
+              {(categories.find(c => c.slug === activeCategorySlug)?.subcategories || []).map(sub => (
+                <li key={sub}>
+                  <button
+                    onClick={() => setActiveSubcategory(activeSubcategory === sub ? null : sub)}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition ${activeSubcategory === sub ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40' : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'}`}
+                  >
+                    {sub}
+                  </button>
+                </li>
+              ))}
+            </>
+          )}
+        </ul>
+      </div>
+
+      {/* Usuario */}
+      <div className="p-3 mt-auto border-t border-slate-800/50">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-full hover:bg-slate-900/50 cursor-pointer transition">
+          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
+            <User className="w-4 h-4 text-slate-400" />
           </div>
-          
-          <div className="flex items-center gap-3">
-            {/* Botón Menú: abre página de menú o vuelve si ya estás en ella */}
-            <button 
-              onClick={() => {
-                if (currentPage === 'menu') {
-                  const backTo = VALID_PAGES.includes(previousPageBeforeMenu) ? previousPageBeforeMenu : 'home';
-                  setCurrentPage(backTo);
-                } else {
-                  setPreviousPageBeforeMenu(currentPage);
-                  setCurrentPage('menu');
-                }
-              }}
-              className="touch-target bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-xl transition"
-              aria-label={currentPage === 'menu' ? 'Volver' : 'Abrir menú'}
-            >
-              {currentPage === 'menu' ? (
-                <ArrowLeft className="w-5 h-5 text-slate-300" />
-              ) : (
-                <Menu className="w-5 h-5 text-slate-300" />
-              )}
-            </button>
-          </div>
+          <span className="hidden lg:block text-sm font-semibold text-slate-300 truncate">Mi perfil</span>
         </div>
-      </header>
+      </div>
+    </aside>
+  );
+
+  return (
+    <div className="min-h-screen bg-black text-slate-300 font-sans pb-20 md:pb-0">
 
       {/* PÁGINA DE MENÚ (página separada con más espacio) */}
       {currentPage === 'menu' && (
-        <main className="max-w-2xl mx-auto px-4 py-8">
+        <div className="flex">
+          {LeftSidebar}
+          <div className="flex-1 min-w-0">
+        <main className="max-w-[600px] mx-auto px-4 py-6">
           <button
             onClick={() => {
               const backTo = VALID_PAGES.includes(previousPageBeforeMenu) ? previousPageBeforeMenu : 'home';
@@ -1047,11 +1134,16 @@ export default function App() {
             </button>
           </div>
         </main>
+          </div>
+        </div>
       )}
 
       {/* PÁGINA GENERAL - Landing profesional */}
       {currentPage === 'general' && (
-        <main className="max-w-4xl mx-auto px-4 py-8">
+        <div className="flex">
+          {LeftSidebar}
+          <div className="flex-1 min-w-0">
+        <main className="max-w-[680px] mx-auto px-4 py-6">
           <button 
             onClick={() => setCurrentPage('home')}
             className="flex items-center gap-2 text-slate-400 hover:text-cyan-400 mb-6 transition"
@@ -1292,11 +1384,16 @@ export default function App() {
             </div>
           )}
         </main>
+          </div>
+        </div>
       )}
 
       {/* LANDING DONACIONES */}
       {currentPage === 'donations' && (
-        <main className="max-w-3xl mx-auto px-4 py-8">
+        <div className="flex">
+          {LeftSidebar}
+          <div className="flex-1 min-w-0">
+        <main className="max-w-[680px] mx-auto px-4 py-6">
           <button
             onClick={() => setCurrentPage('general')}
             className="flex items-center gap-2 text-slate-400 hover:text-pink-400 mb-6 transition"
@@ -1342,11 +1439,16 @@ export default function App() {
             Explorar debates
           </button>
         </main>
+          </div>
+        </div>
       )}
 
       {/* LANDING NOSOTROS */}
       {currentPage === 'nosotros' && (
-        <main className="max-w-3xl mx-auto px-4 py-8">
+        <div className="flex">
+          {LeftSidebar}
+          <div className="flex-1 min-w-0">
+        <main className="max-w-[680px] mx-auto px-4 py-6">
           <button
             onClick={() => setCurrentPage('general')}
             className="flex items-center gap-2 text-slate-400 hover:text-amber-400 mb-6 transition"
@@ -1396,6 +1498,8 @@ export default function App() {
             Explorar debates
           </button>
         </main>
+          </div>
+        </div>
       )}
 
       {/* PÁGINA DE NOTAS DE LA COMUNIDAD */}
@@ -1515,205 +1619,88 @@ export default function App() {
 
       {/* PÁGINA PERFIL */}
       {currentPage === 'perfil' && (
-        <Profile
-          onBack={handleProfileBack}
-          onLogout={handleProfileLogout}
-          userIdeologies={userIdeologies}
-          setUserIdeologies={setUserIdeologies}
-          showIdeologyDropdown={showIdeologyDropdown}
-          setShowIdeologyDropdown={setShowIdeologyDropdown}
-          availableIdeologies={availableIdeologies}
-        />
+        <div className="flex">
+          {LeftSidebar}
+          <div className="flex-1 min-w-0">
+            <Profile
+              onBack={handleProfileBack}
+              onLogout={handleProfileLogout}
+              userIdeologies={userIdeologies}
+              setUserIdeologies={setUserIdeologies}
+              showIdeologyDropdown={showIdeologyDropdown}
+              setShowIdeologyDropdown={setShowIdeologyDropdown}
+              availableIdeologies={availableIdeologies}
+            />
+          </div>
+        </div>
       )}
 
       {/* PÁGINA PRINCIPAL / CATEGORÍA */}
       {(currentPage === 'home' || currentPage === 'category') && !selectedProposalForNotes && (
-      <main className="max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
-        {/* SIDEBAR */}
-        <aside className="md:w-64 flex-shrink-0">
-          <div className="bg-slate-800/60 rounded-2xl border border-slate-700/50 p-5 sticky top-24 backdrop-blur-sm">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Categorías</h2>
-            <ul className="space-y-1">
-              {currentPage === 'home' ? (
-                <>
-                  <li>
-                    <button
-                      onClick={() => {
-                        setActiveCategory('Todas');
-                        setActiveSubcategory(null);
-                        setIsCategoryListOpen(!isCategoryListOpen);
-                      }}
-                      className={`w-full flex justify-between items-center px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-                        activeCategory === 'Todas'
-                          ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
-                          : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
-                      }`}
-                    >
-                      Todas las categorías
-                      <ChevronDown className={`w-4 h-4 transition-transform ${isCategoryListOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                  </li>
-                  {isCategoryListOpen && categories.map(cat => (
-                    <li key={cat.name} className="ml-2 mt-1">
-                      <button
-                        onClick={() => {
-                          history.pushState({}, '', '/' + cat.slug);
-                          setCurrentPage('category');
-                          setActiveCategory(cat.name);
-                          setActiveCategorySlug(cat.slug);
-                          setActiveSubcategory(null);
-                          setExpandedCategory(expandedCategory === cat.name ? null : cat.name);
-                        }}
-                        className={`w-full flex justify-between items-center text-left px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-                          activeCategory === cat.name && !activeSubcategory
-                            ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
-                            : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
-                        }`}
-                      >
-                        {cat.name}
-                        {cat.subcategories.length > 0 && (
-                          <ChevronDown className={`w-3 h-3 transition-transform ${expandedCategory === cat.name ? 'rotate-180' : ''}`} />
-                        )}
-                      </button>
-                      {expandedCategory === cat.name && (
-                        <ul className="ml-3 mt-2 space-y-1 border-l-2 border-slate-700 pl-3">
-                          {cat.subcategories.map(sub => (
-                            <li key={sub}>
-                              <button
-                                onClick={() => {
-                                  setActiveCategory(cat.name);
-                                  setActiveSubcategory(sub);
-                                }}
-                                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition ${
-                                  activeSubcategory === sub
-                                    ? 'bg-cyan-600/30 text-cyan-300 font-bold'
-                                    : 'hover:bg-slate-700/50 text-slate-500'
-                                }`}
-                              >
-                                {sub}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-                </>
-              ) : (
-                <>
-                  <li>
-                    <button
-                      onClick={() => {
-                        history.pushState({}, '', '/');
-                        setCurrentPage('home');
-                        setActiveCategory('Todas');
-                        setActiveCategorySlug(null);
-                        setActiveSubcategory(null);
-                      }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-700/50 text-slate-400 border border-transparent transition"
-                    >
-                      <ArrowLeft className="w-3 h-3" /> Todas las categorías
-                    </button>
-                  </li>
-                  <li className="px-4 py-2">
-                    <span className="text-sm font-bold text-slate-200">{activeCategory}</span>
-                  </li>
-                  <li>
-                    <button
-                      onClick={() => setActiveSubcategory(null)}
-                      className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-                        !activeSubcategory
-                          ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
-                          : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
-                      }`}
-                    >
-                      Todos los temas
-                    </button>
-                  </li>
-                  {(categories.find(c => c.slug === activeCategorySlug)?.subcategories || []).map(sub => (
-                    <li key={sub}>
-                      <button
-                        onClick={() => setActiveSubcategory(activeSubcategory === sub ? null : sub)}
-                        className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-                          activeSubcategory === sub
-                            ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
-                            : 'hover:bg-slate-700/50 text-slate-400 border border-transparent'
-                        }`}
-                      >
-                        {sub}
-                      </button>
-                    </li>
-                  ))}
-                </>
-              )}
-            </ul>
-
-          </div>
-        </aside>
+      <div className="flex">
+        {LeftSidebar}
 
         {/* FEED PRINCIPAL */}
-        <div className="flex-grow max-w-3xl">
-          
-          {/* Controles de Vista */}
-          <div className="bg-slate-800/60 rounded-2xl border border-slate-700/50 p-2 flex justify-between items-center mb-8 backdrop-blur-sm">
-            <div className="flex bg-slate-900/50 rounded-xl p-1 w-full max-w-sm">
-              <button 
-                onClick={() => setFilterMode('cielo')}
-                className={`flex-1 flex justify-center items-center gap-2 py-2.5 text-sm font-bold rounded-lg transition ${
-                  filterMode === 'cielo' 
-                    ? 'bg-slate-700 text-emerald-400 shadow-lg' 
-                    : 'text-slate-500 hover:text-slate-400'
-                }`}
-              >
-                ☁️ Cielo (Consenso)
-              </button>
-              <button 
-                onClick={() => setFilterMode('infierno')}
-                className={`flex-1 flex justify-center items-center gap-2 py-2.5 text-sm font-bold rounded-lg transition ${
-                  filterMode === 'infierno' 
-                    ? 'bg-slate-700 text-red-400 shadow-lg' 
-                    : 'text-slate-500 hover:text-slate-400'
-                }`}
-              >
-                🔥 Infierno (Rechazo)
-              </button>
+        <div className="flex-1 min-w-0 border-r border-slate-800/50 flex flex-col">
+          {/* Mobile header */}
+          <header className="md:hidden sticky top-0 z-50 bg-black/90 backdrop-blur-sm border-b border-slate-800/50 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <img src="https://flagcdn.com/w40/ve.png" alt="Venezuela" className="w-7 h-5 object-cover rounded-sm" />
+              <h1 className="text-lg font-extrabold tracking-tight">
+                <span className="text-yellow-400">VEN</span><span className="text-blue-500">EZU</span><span className="text-red-500">ELA</span> <span className="text-white">LIVE</span>
+              </h1>
             </div>
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="hidden sm:flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-cyan-900/30"
+            <button onClick={() => setIsModalOpen(true)} className="p-2 bg-cyan-600 rounded-full">
+              <PlusCircle className="w-4 h-4 text-white" />
+            </button>
+          </header>
+
+          {/* Tabs Cielo/Infierno */}
+          <div className="sticky top-0 z-10 flex border-b border-slate-800/50 bg-black/90 backdrop-blur-sm">
+            <button
+              onClick={() => setFilterMode('cielo')}
+              className={`flex-1 py-4 text-center text-sm font-bold transition border-b-2 ${
+                filterMode === 'cielo'
+                  ? 'border-cyan-400 text-white'
+                  : 'border-transparent text-slate-500 hover:bg-slate-900/50'
+              }`}
             >
-              <MessageSquare className="w-4 h-4" /> Nuevo Tema
+              ☁️ Cielo
+            </button>
+            <button
+              onClick={() => setFilterMode('infierno')}
+              className={`flex-1 py-4 text-center text-sm font-bold transition border-b-2 ${
+                filterMode === 'infierno'
+                  ? 'border-cyan-400 text-white'
+                  : 'border-transparent text-slate-500 hover:bg-slate-900/50'
+              }`}
+            >
+              🔥 Infierno
             </button>
           </div>
 
           {/* Lista de Temas */}
-          <div className="space-y-8">
+          <div>
             {filteredThreads.length === 0 ? (
-              <div className="text-center py-16 bg-slate-800/40 rounded-2xl border-2 border-dashed border-slate-700/50">
+              <div className="text-center py-16 px-4">
                 <p className="text-slate-500 font-medium">No hay propuestas en esta sección.</p>
               </div>
             ) : (
               filteredThreads.map(thread => (
-                <article key={thread.id} className="bg-slate-800/60 rounded-2xl border border-slate-700/50 overflow-hidden backdrop-blur-sm">
+                <article key={thread.id} className="border-b border-slate-800/60 px-4 py-4 hover:bg-white/[0.02] transition">
                   {/* Cabecera del Tema */}
-                  <div className="bg-slate-800/80 px-6 py-5 border-b border-slate-700/50">
-                    <div className="flex gap-2 mb-3">
-                      <span className="inline-block px-3 py-1.5 bg-cyan-900/40 text-cyan-400 text-xs font-bold rounded-lg border border-cyan-700/40">
-                        {thread.category}
-                      </span>
-                      {thread.subcategory && (
-                        <span className="inline-block px-3 py-1.5 bg-slate-700/60 text-slate-400 text-xs font-bold rounded-lg border border-slate-600/50">
-                          {thread.subcategory}
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="text-xl font-bold text-slate-200 leading-tight">
-                      {thread.topic}
-                    </h2>
+                  <div className="mb-2">
+                    <span className="text-xs text-cyan-400/80 font-semibold">{thread.category}</span>
+                    {thread.subcategory && (
+                      <span className="text-xs text-slate-500 ml-2">· {thread.subcategory}</span>
+                    )}
                   </div>
+                  <h2 className="text-[17px] font-bold text-slate-100 leading-snug mb-3">
+                    {thread.topic}
+                  </h2>
 
                   {/* Cuerpo: El Rey de la Colina */}
-                  <div className="p-6">
+                  <div>
                     <ProposalCard threadId={thread.id} proposal={thread.king} isKing={true} />
 
                     {/* Contrapropuestas */}
@@ -1721,60 +1708,37 @@ export default function App() {
                       const isExpanded = expandedThreads[thread.id];
                       const topChallenger = thread.challengers[0];
                       const remainingChallengers = thread.challengers.slice(1);
-                      
                       return (
-                        <div className="mt-8 ml-4 pl-5 border-l-2 border-slate-600/50 space-y-4 relative">
-                          <div className="absolute -left-3 top-0 bg-slate-800 px-2 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                        <div className="mt-3 space-y-0">
+                          <span className="text-xs text-slate-500 uppercase tracking-wide font-semibold block mb-1">
                             Contrapropuestas ({thread.challengers.length})
-                          </div>
-                          <div className="pt-5 space-y-4">
-                            {/* Siempre mostrar el retador más fuerte */}
-                            <div className="relative">
-                              <div className="absolute -left-7 top-4 text-xs font-bold text-cyan-400">★</div>
-                              <ProposalCard threadId={thread.id} proposal={topChallenger} isKing={false} />
-                            </div>
-                            
-                            {/* Resto de contrapropuestas (colapsables) */}
-                            {remainingChallengers.length > 0 && (
-                              <>
-                                {isExpanded && remainingChallengers.map(challenger => (
-                                  <ProposalCard key={challenger.id} threadId={thread.id} proposal={challenger} isKing={false} />
-                                ))}
-                                
-                                <button
-                                  onClick={() => setExpandedThreads(prev => ({
-                                    ...prev,
-                                    [thread.id]: !prev[thread.id]
-                                  }))}
-                                  className="w-full py-2 text-sm font-medium text-slate-400 hover:text-cyan-400 transition flex items-center justify-center gap-2 bg-slate-700/30 rounded-lg hover:bg-slate-700/50"
-                                >
-                                  {isExpanded ? (
-                                    <>
-                                      <ChevronUp className="w-4 h-4" />
-                                      Ocultar {remainingChallengers.length} contrapropuesta{remainingChallengers.length > 1 ? 's' : ''}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ChevronDown className="w-4 h-4" />
-                                      Ver {remainingChallengers.length} contrapropuesta{remainingChallengers.length > 1 ? 's' : ''} más
-                                    </>
-                                  )}
-                                </button>
-                              </>
-                            )}
-                          </div>
+                          </span>
+                          <ProposalCard threadId={thread.id} proposal={topChallenger} isKing={false} />
+                          {remainingChallengers.length > 0 && (
+                            <>
+                              {isExpanded && remainingChallengers.map(challenger => (
+                                <ProposalCard key={challenger.id} threadId={thread.id} proposal={challenger} isKing={false} />
+                              ))}
+                              <button
+                                onClick={() => setExpandedThreads(prev => ({ ...prev, [thread.id]: !prev[thread.id] }))}
+                                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-cyan-400 transition py-1 mt-1"
+                              >
+                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                {isExpanded
+                                  ? `Ocultar ${remainingChallengers.length} más`
+                                  : `Ver ${remainingChallengers.length} más`}
+                              </button>
+                            </>
+                          )}
                         </div>
                       );
                     })()}
 
                     <button
-                      onClick={() => {
-                        setContrapropuestaThreadId(thread.id);
-                        setContrapropuestaModalOpen(true);
-                      }}
-                      className="mt-6 w-full py-4 border-2 border-dashed border-slate-600/50 text-slate-500 font-medium rounded-xl hover:bg-slate-700/30 hover:text-cyan-400 hover:border-cyan-500/40 transition flex justify-center items-center gap-2"
+                      onClick={() => { setContrapropuestaThreadId(thread.id); setContrapropuestaModalOpen(true); }}
+                      className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 hover:text-cyan-400 transition py-1"
                     >
-                      <PlusCircle className="w-5 h-5" /> Agregar Contrapropuesta
+                      <PlusCircle className="w-3.5 h-3.5" /> Agregar contrapropuesta
                     </button>
                   </div>
                 </article>
@@ -1782,7 +1746,37 @@ export default function App() {
             )}
           </div>
         </div>
-      </main>
+
+        {/* Panel derecho — lg+ */}
+        <aside className="hidden lg:block w-[350px] shrink-0 p-4 sticky top-0 h-screen overflow-y-auto">
+          <div className="mb-4 px-4 py-3 bg-slate-900/60 rounded-full border border-slate-800/50 text-slate-500 text-sm">
+            Buscar en Venezuela LIVE
+          </div>
+          <div className="bg-slate-900/60 rounded-2xl border border-slate-800/50 p-4 mb-4">
+            <h3 className="text-[15px] font-bold text-slate-200 mb-3">Categorías</h3>
+            <ul className="space-y-2">
+              {categories.slice(0, 8).map(cat => (
+                <li key={cat.name}>
+                  <button
+                    onClick={() => { history.pushState({}, '', '/' + cat.slug); setCurrentPage('category'); setActiveCategory(cat.name); setActiveCategorySlug(cat.slug); setActiveSubcategory(null); }}
+                    className="text-sm text-cyan-400 hover:underline text-left"
+                  >
+                    {cat.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="bg-slate-900/60 rounded-2xl border border-slate-800/50 p-4">
+            <h3 className="text-[15px] font-bold text-slate-200 mb-3">Más</h3>
+            <ul className="space-y-2 text-sm">
+              <li><button onClick={() => setCurrentPage('general')} className="text-slate-400 hover:text-cyan-400 transition">General</button></li>
+              <li><button onClick={() => setCurrentPage('donations')} className="text-slate-400 hover:text-cyan-400 transition">Donaciones</button></li>
+              <li><button onClick={() => setCurrentPage('nosotros')} className="text-slate-400 hover:text-cyan-400 transition">Nosotros</button></li>
+            </ul>
+          </div>
+        </aside>
+      </div>
       )}
 
       {/* MODAL NUEVO TEMA */}
@@ -2007,7 +2001,10 @@ export default function App() {
 
       {/* PÁGINA PREMIUM: alias bancario y formulario de ticket de pago */}
       {currentPage === 'premium' && (
-        <main className="max-w-3xl mx-auto px-4 py-8">
+        <div className="flex">
+          {LeftSidebar}
+          <div className="flex-1 min-w-0">
+        <main className="max-w-[680px] mx-auto px-4 py-6">
           <button onClick={() => setCurrentPage('general')} className="flex items-center gap-2 text-slate-400 hover:text-amber-400 mb-6 transition">
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm font-medium">Volver</span>
@@ -2077,10 +2074,12 @@ export default function App() {
             </div>
           </div>
         </main>
+          </div>
+        </div>
       )}
-      
+
       {/* Bottom App Bar: navegación principal accesible al pulgar */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 bg-slate-900/95 border-t border-slate-700/60 backdrop-blur-md">
+      <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden bg-black border-t border-slate-800/50 backdrop-blur-md">
         <div className="max-w-4xl mx-auto px-4 py-2 flex items-center justify-between gap-2">
           <button
             onClick={() => { history.pushState({}, '', '/'); setCurrentPage('home'); setActiveCategory('Todas'); setActiveCategorySlug(null); setActiveSubcategory(null); }}
