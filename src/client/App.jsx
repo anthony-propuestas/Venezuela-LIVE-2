@@ -80,7 +80,6 @@ const formatTimeRemaining = (targetDate) => {
   return `${minutes}m`;
 };
 
-// --- DATOS SIMULADOS (MOCK DATA) ---
 const CATEGORY_TREE = [
   { name: 'Economía', subcategories: ['Moneda', 'Inflación', 'Impuestos'] },
   { name: 'Salud', subcategories: ['Infraestructura', 'Personal Médico', 'Insumos'] },
@@ -92,91 +91,6 @@ const CATEGORY_TREE = [
 /** Páginas válidas para navegación (evita estados inválidos al volver del menú). */
 const VALID_PAGES = ['home', 'general', 'perfil', 'donations', 'nosotros', 'premium'];
 
-const INITIAL_THREADS = [
-  {
-    id: 't1',
-    category: 'Educación',
-    subcategory: 'Docentes',
-    topic: '¿Cómo recuperar el salario de los docentes universitarios y de educación media?',
-    proposals: [
-      {
-        id: 'p1',
-        title: 'Indexación al valor de la canasta básica',
-        description: 'Indexar el salario al valor de la canasta básica familiar mediante un fondo mixto financiado por exportaciones petroleras y un nuevo impuesto a transacciones en divisas.',
-        author: 'EconoVen',
-        upvotes: 1250,
-        downvotes: 150,
-        netScore: 1100,
-        comments: [
-          { id: 'c1', text: 'Totalmente de acuerdo. La canasta básica es la única métrica realista hoy en día.', position: 'favor' },
-          { id: 'c2', text: 'El impuesto a divisas va a destruir el comercio local.', position: 'contra' }
-        ],
-        notes: [
-          { id: 'n1', text: 'Nota: Un impuesto a transacciones en divisas aumentaría la inflación de los productos importados básicos.', netScore: 45 }
-        ]
-      },
-      {
-        id: 'p2',
-        title: 'Privatización parcial del sistema',
-        description: 'Privatizar parcialmente el sistema universitario y usar los fondos ahorrados para subsidiar directamente el sueldo de los profesores de educación media.',
-        author: 'Libertad99',
-        upvotes: 400,
-        downvotes: 800,
-        netScore: -400,
-        notes: []
-      },
-      {
-        id: 'p3',
-        title: 'Salario base anclado a aduanas',
-        description: 'Establecer un salario base de $300 anclado a la recaudación aduanera, eliminando bonos sin incidencia salarial.',
-        author: 'ProfeGremial',
-        upvotes: 1050,
-        downvotes: 50,
-        netScore: 1000,
-        notes: []
-      }
-    ]
-  },
-  {
-    id: 't2',
-    category: 'Economía',
-    subcategory: 'Moneda',
-    topic: 'Reestructuración de la Moneda Nacional',
-    proposals: [
-      {
-        id: 'p4',
-        title: 'Dolarización oficial',
-        description: 'Dolarización oficial y definitiva de la economía para detener la devaluación y generar confianza en inversores extranjeros.',
-        author: 'CapitalLibre',
-        upvotes: 5000,
-        downvotes: 4950,
-        netScore: 50,
-        notes: [
-          { id: 'n2', text: 'Nota: La dolarización oficial requiere un acuerdo con la Reserva Federal de EE.UU. que actualmente es inviable por sanciones.', netScore: 800 }
-        ]
-      }
-    ]
-  },
-  {
-    id: 't3',
-    category: 'Servicios Públicos',
-    subcategory: 'Electricidad',
-    topic: 'Solución a la crisis eléctrica (SEN)',
-    proposals: [
-      {
-        id: 'p6',
-        title: 'Micro-redes solares comunitarias',
-        description: 'Descentralizar el sistema eléctrico promoviendo micro-redes solares comunitarias subsidiadas en las regiones más afectadas como Zulia y Los Andes.',
-        author: 'EcoZulia',
-        upvotes: 850,
-        downvotes: 50,
-        netScore: 800,
-        notes: []
-      }
-    ]
-  }
-];
-
 export default function App() {
   const [estaAutenticado, setEstaAutenticado] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -186,7 +100,7 @@ export default function App() {
     setEstaAutenticado(!!stored);
     setAuthChecked(true);
   }, []);
-  const [threads, setThreads] = useState(INITIAL_THREADS);
+  const [threads, setThreads] = useState([]);
 
   useEffect(() => {
     if (!estaAutenticado) return;
