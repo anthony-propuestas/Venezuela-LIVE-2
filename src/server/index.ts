@@ -135,7 +135,7 @@ app.get('/api/profile/username/check', async (c) => {
 });
 
 app.put('/api/profile', async (c) => {
-  const { userId, email, name } = c.get('user');
+  const { userId, email } = c.get('user');
   const db = c.env.DB;
 
   let body: { displayName?: string; username?: string; birthDate?: string; description?: string; ideologies?: string[] };
@@ -168,7 +168,7 @@ app.put('/api/profile', async (c) => {
 
   await upsertProfile(db, {
     userId,
-    email: email || name,
+    email: email,
     displayName,
     username,
     birthDate,

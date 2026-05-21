@@ -74,7 +74,10 @@ function getAllowlistEmails(allowlistEnv: string | undefined): string[] {
 /** Middleware que exige JWT (o bypass en dev) en todas las rutas /api/* excepto /api/cron/weekly-reports. */
 export function createAuthMiddleware() {
   return async (c: Context<AppBindings>, next: () => Promise<void>) => {
-    if (c.req.path === '/api/cron/weekly-reports') {
+    if (
+      c.req.path === '/api/cron/weekly-reports' ||
+      c.req.path === '/api/cron/profile-photos-sanitize'
+    ) {
       await next();
       return;
     }
