@@ -66,7 +66,7 @@ POST /api/topics/:topicId/proposals
   3. Validación de body (title max 200, description max 2000)
   4. Verifica que el topic existe en D1
   5. Obtiene author desde perfil en D1 (Zero Trust)
-  6. Rate limit check en KV (si no es premium)
+  6. Rate limit check en KV
   7. INSERT en D1 con prepared statement
   8. emitGamificationEventAsync() en background
   9. Retorna la propuesta creada
@@ -81,7 +81,7 @@ POST /api/topics
   1. auth middleware → userId verificado
   2. Validación de body (category max 100, topicText max 300, proposalTitle max 200, proposalDescription max 2000)
   3. Obtiene author desde perfil en D1 (Zero Trust)
-  4. Rate limit check en KV (si no es premium)
+  4. Rate limit check en KV
   5. INSERT topic + INSERT proposal en D1 (batch)
   6. emitGamificationEventAsync() en background
   7. Retorna el thread creado

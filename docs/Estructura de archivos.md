@@ -53,13 +53,12 @@ raíz/
 │   │   │   └── Profile/
 │   │   │       └── Profile.page.jsx
 │   │   └── services/
-│   │       └── api.service.js # Cliente HTTP: Bearer token, /api/profile, reportes, premium, etc.
+│   │       └── api.service.js # Cliente HTTP: Bearer token, /api/profile, reportes, etc.
 │   ├── server/                # Backend Hono (TypeScript)
 │   │   ├── index.ts           # App Hono; rutas /api/*; fallback app.all('*') → ASSETS
 │   │   ├── types.ts           # Env (D1, R2, KV, ASSETS, secrets)
-│   │   ├── config.ts          # Lectura de GOOGLE_CLIENT_ID, CRON_SECRET, PREMIUM_ALIAS, DEV_BYPASS
+│   │   ├── config.ts          # Lectura de GOOGLE_CLIENT_ID, CRON_SECRET, DEV_BYPASS, ADMIN_*
 │   │   ├── errors.ts          # ErrorCode, DomainError y subclases, mapErrorToResponseBody
-│   │   ├── premium.ts         # Lógica premium: isUserPremium, createPaymentTicket, getTicketsByUser
 │   │   ├── middlewares/
 │   │   │   ├── auth.middleware.ts   # JWT (o bypass dev) en /api/* salvo cron
 │   │   │   ├── errors.middleware.ts # Mapeo de errores a JSON
@@ -120,7 +119,7 @@ raíz/
 5. **Hono** en `src/server/index.ts`:
    - Aplica `createAuthMiddleware()` a `/api/*` (excepto `/api/cron/weekly-reports`).
    - Registra `onError(createErrorHandler())`.
-   - Define rutas concretas para `/api/profile`, `/api/profile/photo`, `/api/actions/consume`, `/api/premium/*`, `/api/reports/weekly/*`, `/api/cron/weekly-reports`, etc.
+   - Define rutas concretas para `/api/profile`, `/api/profile/photo`, `/api/actions/consume`, `/api/reports/weekly/*`, `/api/cron/weekly-reports`, etc.
    - **Fallback:** `app.all('*', ...)` hace `c.env.ASSETS.fetch(c.req.raw)` para servir el frontend estático (index.html, JS, CSS).
 
 En resumen: **una sola función catch-all** recibe todo el tráfico y lo resuelve con la app Hono (API bajo `/api/` o assets con ASSETS).
@@ -146,8 +145,6 @@ En resumen: **una sola función catch-all** recibe todo el tráfico y lo resuelv
   - `DELETE /api/profile/photo`
   - `GET /api/profile/photo`
   - `POST /api/actions/consume`
-  - `GET /api/premium/status`
-  - `POST /api/premium/ticket`
   - `GET /api/reports/weekly/positives`
   - `GET /api/reports/weekly/negatives`
   - `GET /api/reports/weekly/volume`
@@ -158,12 +155,12 @@ En resumen: **una sola función catch-all** recibe todo el tráfico y lo resuelv
 
 ### 4.2 Frontend: “rutas” y páginas
 
-- **No hay router (React Router, etc.).** La “navegación” se hace con **estado en React:** `currentPage` en `App.jsx`. Valores usados: `'home'`, `'general'`, `'perfil'`, `'donations'`, `'nosotros'`, `'premium'`, `'menu'` (menú lateral).
-- **Lista de páginas válidas:** la constante `VALID_PAGES` en `App.jsx` es **exactamente** `['home', 'general', 'perfil', 'donations', 'nosotros', 'premium']` — **no incluye** `'menu'`. Se usa solo para decidir a qué página volver al cerrar el menú (si `previousPageBeforeMenu` no está en `VALID_PAGES`, se vuelve a `'home'`).
+- **No hay router (React Router, etc.).** La “navegación” se hace con **estado en React:** `currentPage` en `App.jsx`. Valores usados: `'home'`, `'general'`, `'perfil'`, `'donations'`, `'nosotros'`, `'menu'` (menú lateral).
+- **Lista de páginas válidas:** la constante `VALID_PAGES` en `App.jsx` es **exactamente** `['home', 'general', 'perfil', 'donations', 'nosotros']` — **no incluye** `'menu'`. Se usa solo para decidir a qué página volver al cerrar el menú (si `previousPageBeforeMenu` no está en `VALID_PAGES`, se vuelve a `'home'`).
 - **Componentes de página:** se identifican por carpeta y sufijo:
   - `src/client/pages/Login/Login.page.jsx` → Login (y export de `LoginBypass`, `getStoredAuth`, `clearAuth`, `AUTH_PAUSED`).
   - `src/client/pages/Profile/Profile.page.jsx` → Perfil.
-- El resto de vistas (home, general, menú, donations, nosotros, premium, notas de la comunidad, modales) están **dentro de `App.jsx`** como condicionales sobre `currentPage` o estado (ej. `selectedProposalForNotes`, `isModalOpen`, `rateLimitModal`).
+- El resto de vistas (home, general, menú, donations, nosotros, notas de la comunidad, modales) están **dentro de `App.jsx`** como condicionales sobre `currentPage` o estado (ej. `selectedProposalForNotes`, `isModalOpen`, `rateLimitModal`).
 
 ### 4.3 Alias de módulos (@client, @server, @shared)
 
@@ -183,7 +180,7 @@ En resumen: **una sola función catch-all** recibe todo el tráfico y lo resuelv
   - **reports:** controladores, servicio, capa de datos, generación PDF.
   - **gamification:** event bus, servicio, listeners, integración, tipos, errores; se exporta todo desde `index.ts`.
   - **media:** saneamiento de imágenes (actualmente, eliminación de EXIF en fotos de perfil antes de persistir en R2).
-- **Migraciones:** en `migrations/` con patrón **`NNNN_descripcion.sql`**. En el código existen exactamente **10 archivos:** `0001_create_profiles.sql`, `0002_add_username.sql`, `0003_create_proposals_schema.sql`, `0004_seed_proposals.sql`, `0005_create_achievements.sql`, `0006_create_user_achievements.sql`, `0007_add_gamification_to_profiles.sql`, `0008_add_is_premium_and_payment_tickets.sql`, `0009_add_unique_email_and_payment_reference.sql`, `0010_add_role_to_profiles.sql`. El número ordena la ejecución; no hay runner automático en el código, se ejecutan con scripts npm o PowerShell (`db:migrate:local:*`, `db:migrate:remote`, `migrate-d1-local.ps1`, `migrate-d1-remote.ps1`).
+- **Migraciones:** en `migrations/` con patrón **`NNNN_descripcion.sql`**. En el código existen exactamente **11 archivos:** `0001_create_profiles.sql`, `0002_add_username.sql`, `0003_create_proposals_schema.sql`, `0004_seed_proposals.sql`, `0005_create_achievements.sql`, `0006_create_user_achievements.sql`, `0007_add_gamification_to_profiles.sql`, `0008_add_is_premium_and_payment_tickets.sql`, `0009_add_unique_email_and_payment_reference.sql`, `0010_add_role_to_profiles.sql`, `0011_categories.sql`. El número ordena la ejecución; no hay runner automático en el código, se ejecutan con scripts npm o PowerShell (`db:migrate:local:*`, `db:migrate:remote`, `migrate-d1-local.ps1`, `migrate-d1-remote.ps1`).
 
 ### 4.5 Identificación de errores
 
@@ -193,7 +190,7 @@ En resumen: **una sola función catch-all** recibe todo el tráfico y lo resuelv
 
 ### 4.6 Tipos compartidos y contratos
 
-- **Usuario y perfil:** `User` y `ProfileUpdateBody` en `src/shared/types/api.types.ts`; el servidor usa `User` desde ahí y define `Env` en `src/server/types.ts`. En **`src/shared/types/profile.types.ts`** están definidos los tipos de respuesta de perfil: `ProfileResponse` (displayName, username, birthDate, description, ideologies, hasPhoto, isPremium, gamification), `GamificationInfo` (totalXp, achievements) y `AchievementItem` (id, name, description, earnedAt).
+- **Usuario y perfil:** `User` y `ProfileUpdateBody` en `src/shared/types/api.types.ts`; el servidor usa `User` desde ahí y define `Env` en `src/server/types.ts`. En **`src/shared/types/profile.types.ts`** están definidos los tipos de respuesta de perfil: `ProfileResponse` (displayName, username, birthDate, description, ideologies, hasPhoto, gamification), `GamificationInfo` (totalXp, achievements) y `AchievementItem` (id, name, description, earnedAt).
 - **Constantes de validación:** `USERNAME_MIN`, `USERNAME_MAX`, `USERNAME_REGEX` en `src/shared/constants.ts`, usadas en el servidor para validar username.
 - **Gamificación:** tipos propios en `src/server/domain/gamification/types.ts` (eventos, logros, etc.); el dominio se encapsula en `domain/gamification/` y se expone vía `index.ts`.
 
@@ -264,7 +261,7 @@ Esta sección refleja lo que **realmente hace el código**, contrastado con la d
 | **R2** | En wrangler hay dos bindings de R2: `R2_BUCKET` y `y` (mismo bucket). En el servidor solo se usa `c.env.R2_BUCKET`. | Se aclara que el binding usado en código es `R2_BUCKET`; el otro existe en config. |
 | **Manejo de errores** | `functions/[[path]].ts` tiene un `try/catch` alrededor de `app.fetch`; si falla, responde 500 con `{ error: 'Error interno del servidor.', detail: message }`. | Se documentan las dos capas: Hono `onError` para errores en rutas y la captura en la función para excepciones no manejadas. |
 | **Rutas API** | Listado completo en `src/server/index.ts`: incluye `GET /api/profile/username/check`, `DELETE /api/profile/photo`, `GET /api/profile/photo`. | Se añadieron todas las rutas con método y path exactos. |
-| **VALID_PAGES** | En `App.jsx` línea 93: `['home', 'general', 'perfil', 'donations', 'nosotros', 'premium']` — sin `'menu'`. | Se especifica la lista exacta y que `'menu'` no está en `VALID_PAGES` (solo se usa como valor de `currentPage` para la pantalla de menú). |
+| **VALID_PAGES** | En `App.jsx`: `['home', 'general', 'perfil', 'donations', 'nosotros']` — sin `'menu'`. | Se especifica la lista exacta y que `'menu'` no está en `VALID_PAGES` (solo se usa como valor de `currentPage` para la pantalla de menú). |
 | **Dev local** | `dev:pages` no usa `--port`; `dev:worker` sí usa `--port 8787`. Proxy de Vite apunta a `http://localhost:8787`. | Se distingue dev:pages (puerto por defecto de Wrangler), dev:worker (8787) y que con `npm run dev` hace falta tener el worker en 8787 para que el proxy funcione. |
 | **Cuerpo de error y cliente** | `mapErrorToResponseBody` devuelve `{ error, message, detail?, fieldErrors? }`. `includeDetail` se calcula con `isDevBypassAllowed(c.env)` (env `DEV_BYPASS_ALLOWED === 'true'`). Cliente usa `data?.error`, `data?.message` y en 401 lanza `SESSION_EXPIRED`. | Se aclara que `detail` depende de `DEV_BYPASS_ALLOWED`, no de NODE_ENV; se describe el uso en el cliente. |
 | **Tipos compartidos perfil** | `profile.types.ts` define `ProfileResponse`, `GamificationInfo`, `AchievementItem`. | Se añade el contenido real de `profile.types.ts`. |

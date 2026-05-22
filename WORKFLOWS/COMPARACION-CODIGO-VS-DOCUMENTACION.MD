@@ -78,11 +78,12 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | D3 | EXIF removido con `@mary/exif-rm` ANTES de guardar en R2 | ✅ |
 | D4 | DOMPurify importado y usado antes de cualquier render de HTML arbitrario | ✅ |
 | D5 | Todas las queries a D1 usan prepared statements (`.prepare().bind()`) — ningún string concatenado | ✅ |
-| D6 | Premium users tienen `is_premium = 1` y el rate limit middleware los excluye | ✅ |
+| D6 | ~~Premium users tienen `is_premium = 1` y el rate limit middleware los excluye~~ **ELIMINADO** — feature premium removido; rate limit ya no referencia `is_premium` | ❌→✅ |
 | D7 | Cron endpoints verifican `X-Cron-Secret` antes de ejecutar | ✅ |
 | D8 | `ALLOWLIST_EMAILS` documentado en SECURITY.md: cuando tiene valor, bloquea con 403 emails no listados | ✅ |
 | D9 | Las dos rutas cron (`/weekly-reports` y `/profile-photos-sanitize`) están documentadas como excluidas del JWT middleware | ✅ |
 | D10 | JWT admin en `sessionStorage` está documentado como excepción intencional a la regla de tokens solo en memoria | ✅ |
+| D11 | `public/_headers` existe con HTTP security headers (CSP, X-Frame-Options, HSTS, etc.); documentado en SECURITY.md y DEPLOYMENT.md | ✅ |
 
 **Cómo verificar:** Grep `localStorage.setItem` en `src/client/`. Grep `exif-rm` en `src/server/`. Grep `DOMPurify` en `src/client/`. Busca queries sin `.prepare()`.
 
@@ -97,7 +98,7 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | E7 | `ALLOWLIST_EMAILS` aparece en `CONFIGURATION.md` con descripción de comportamiento | ✅ |
 | E3 | `DEV_BYPASS_ALLOWED` solo aparece en entorno de desarrollo, nunca hardcodeado en prod | ✅ |
 | E4 | `compatibility_date` en `wrangler.json` está documentada en `CONFIGURATION.md` | ✅ |
-| E5 | Ambos bindings KV (`RATE_LIMIT_KV` y `RATE_LIMIT`) están en `wrangler.json` — confirmar cuál se usa | ✅ |
+| E5 | ~~Ambos bindings KV (`RATE_LIMIT_KV` y `RATE_LIMIT`) en `wrangler.json`~~ Solo `RATE_LIMIT_KV`; `RATE_LIMIT` eliminado. CONFIGURATION.md ya refleja solo `RATE_LIMIT_KV` | ❌→✅ |
 | E6 | `pages_build_output_dir` en `wrangler.json` apunta a `./dist` | ✅ |
 
 **Cómo verificar:** Lee `wrangler.json` y `.env.example`, compara contra la tabla de variables en `docs/CONFIGURATION.md`.
@@ -115,6 +116,7 @@ Para cada ítem: marca ✅ si coincide, ❌ si hay discrepancia, y anota la disc
 | F5 | El puerto en los ejemplos `curl` de cron coincide con el servidor de dev (`dev:worker` usa 8787, `dev:pages` usa otro puerto) | ✅ |
 | F6 | Los pasos del "full manual test flow" reflejan el estado actual de la app (no menciona features eliminadas) | ✅ |
 | F7 | `index.test.ts` cubre rutas de categorías: `GET /api/categories` con dev bypass, admin CRUD con y sin auth | ✅ |
+| F8 | `@playwright/test` disponible en devDependencies y documentado en TESTING.md | ✅ |
 
 **Cómo verificar:** Lee `package.json`, lista archivos `.test.jsx/.ts` en `src/`, verifica puerto en ejemplos curl vs scripts de dev.
 
@@ -144,6 +146,13 @@ Llena esta tabla con cada ❌ del checklist. Si no hay discrepancias, deja la ta
 | 16 | DB | B10 (nuevo) | Ítem de checklist faltante para tabla `categories` | DATABASE.md documenta la tabla con columnas correctas | Fix workflow | — |
 | 17 | API | A9 (nuevo) | Ítem de checklist faltante para endpoints de categorías | API.md documenta `GET /api/categories` + admin CRUD completo | Fix workflow | — |
 | 18 | Testing | F7 | `index.test.ts` cubre categorías pero TESTING.md no lo mencionaba | `index.test.ts` incluye suite de categorías (GET público + admin CRUD con/sin auth) | Fix docs | — |
+| 19 | Security | D6 | Workflow ✅: "Rate limit excluye premium users (`is_premium=1`)" | `premium.ts` eliminado; rate limit no referencia `is_premium`; feature completamente removido | Fix workflow | — |
+| 20 | Config | E5 | Workflow ✅: "Ambos bindings KV (`RATE_LIMIT_KV` y `RATE_LIMIT`) en wrangler.json" | `wrangler.json` solo tiene `RATE_LIMIT_KV`; CONFIGURATION.md ya refleja esto | Fix workflow | — |
+| 21 | Architecture | C | `docs/ARCHITECTURE.md` líneas 69 y 84: "Rate limit check en KV (si no es premium)" | Premium eliminado; rate limit aplica a todos sin distinción | Fix docs | — |
+| 22 | Structure | — | `docs/Estructura de archivos.md`: `'premium'` en VALID_PAGES y `/api/premium/*` en rutas | `App.jsx` sin `'premium'` en VALID_PAGES; rutas premium eliminadas | Fix docs | — |
+| 23 | Security | D11 | Sin ítem de checklist para HTTP headers via `public/_headers` | Archivo existe con CSP, X-Frame-Options, HSTS; SECURITY.md y DEPLOYMENT.md documentan | Add to workflow (✅) | — |
+| 24 | Testing | F8 | Sin ítem de checklist para Playwright en devDependencies | `@playwright/test` en devDependencies; TESTING.md lo menciona | Add to workflow (✅) | — |
+| 25 | DB | B1 | `docs/Estructura de archivos.md` dice "10 archivos" de migraciones (0001–0010) | Existe `0011_categories.sql`; total 11 migraciones | Fix docs | — |
 
 **Tipos de acción:**
 - `Fix docs` — el código es correcto, actualizar la documentación
@@ -167,3 +176,4 @@ El workflow está completo cuando:
 | 2026-05-21 | Claude Code | 5 (A8, D8, D9, D10, E7) | Resueltas: Fix docs en API.md (GET /profile/photo), SECURITY.md (ALLOWLIST_EMAILS, rutas cron excluidas, excepción JWT admin), CONFIGURATION.md (ALLOWLIST_EMAILS) |
 | 2026-05-21 | Claude Code | 3 (D2 key name, D1/D2 session persistence, F4 session.test.js) | Resueltas: Fix docs en SECURITY.md + CONFIGURATION.md (key `vl_session`→`venlive_session_v1`), TESTING.md (nuevo test), Fix workflow D1/D2 |
 | 2026-05-21 | Claude Code | 4 (B1, B10, A9, F7) | Resueltas: Fix workflow B1/B10/A9 (checklist actualizado para migration 0011 y feature categories — docs ya estaban correctos); Fix docs TESTING.md (description de index.test.ts menciona categorías) |
+| 2026-05-22 | Claude Code | 7 (D6, E5, C×2, Structure, B1-migraciones, +2 nuevos ítems) | Resueltas: Fix workflow D6/E5 (premium eliminado, RATE_LIMIT removido); Fix docs ARCHITECTURE.md (×2 "si no es premium"); Fix docs Estructura de archivos.md (VALID_PAGES, rutas y count migraciones sin premium/+0011); Add D11 (HTTP headers ✅); Add F8 (Playwright ✅) |

@@ -23,7 +23,7 @@ Ejecuta dos pasos:
 1. **Vite** — compila el frontend React a `dist/`.
 2. **`scripts/build-pages-functions.mjs`** — compila `functions/[[path]].ts` (que importa el servidor Hono) a `dist/functions/`.
 
-El resultado en `dist/` es lo que se despliega.
+El resultado en `dist/` es lo que se despliega. El archivo `public/_headers` se incluye en `dist/` y Cloudflare Pages lo aplica automáticamente a todas las rutas (security headers HTTP).
 
 ---
 
@@ -64,7 +64,6 @@ Configúralas en **Cloudflare Pages > Settings > Environment Variables** (o con 
 | `GOOGLE_CLIENT_ID` | Client ID de la app OAuth en Google Cloud Console |
 | `CRON_SECRET` | Secret para autenticar requests a `/api/cron/*` |
 | `DEV_BYPASS_ALLOWED` | Debe ser `"false"` en producción |
-| `PREMIUM_ALIAS` | Número de cuenta para pagos (visible en UI) |
 
 Las vars `VITE_*` se inyectan en tiempo de build y quedan hardcodeadas en el JS del cliente. No las uses para datos sensibles.
 

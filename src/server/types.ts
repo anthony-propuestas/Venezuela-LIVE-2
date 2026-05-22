@@ -12,7 +12,6 @@ export type Env = {
   /** Inyectado por Pages: fetcher para servir assets estáticos. */
   ASSETS: Fetcher;
   DEV_BYPASS_ALLOWED?: string;
-  PREMIUM_ALIAS?: string;
   /** Secreto para invocar el cron semanal vía HTTP (solo header X-Cron-Secret). */
   CRON_SECRET: string;
   /** Lista de correos permitidos (separados por coma). Solo ellos pueden acceder. */

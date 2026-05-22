@@ -225,20 +225,6 @@ export async function createCounterProposal(topicId, { title, description }) {
   return { ok: true, proposal: data.proposal };
 }
 
-/** Estado Premium: { isPremium, alias, tickets }. */
-export async function getPremiumStatus() {
-  return apiFetch('/api/premium/status');
-}
-
-/** Envía un ticket de pago. body: { reference, paymentDate, amount }. */
-export async function submitPaymentTicket(body) {
-  return apiFetch('/api/premium/ticket', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-}
-
 /** Obtiene todos los temas con sus propuestas y notas. */
 export async function getTopics() {
   return apiFetch('/api/topics');

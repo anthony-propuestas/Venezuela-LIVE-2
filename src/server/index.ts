@@ -5,10 +5,9 @@ import { registerGamificationListener } from './domain/gamification/index.js';
 import { checkAndIncrement, type RateLimitAction } from './middlewares/rateLimit.middleware.js';
 import { createAuthMiddleware } from './middlewares/auth.middleware.js';
 import { createErrorHandler } from './middlewares/errors.middleware.js';
-import { isUserPremium, createPaymentTicket, getTicketsByUser } from './premium.js';
 import type { Env, User } from './types.js';
 import { ValidationError, ConflictError, NotFoundError } from './errors';
-import { getCronSecret, getGoogleClientId, getPremiumAlias, isDevBypassAllowed, getAdminCredentials } from './config';
+import { getCronSecret, getGoogleClientId, isDevBypassAllowed, getAdminCredentials } from './config';
 import { signAdminToken, createAdminMiddleware } from './middlewares/admin.middleware.js';
 import {
   getGamificationForUser,
@@ -64,7 +63,6 @@ app.get('/api/profile', async (c) => {
     }
   }
 
-  const isPremium = Number(row.is_premium ?? 0) === 1;
   const profileBase = {
     displayName: row.display_name ?? '',
     username: row.username ?? '',
@@ -72,7 +70,6 @@ app.get('/api/profile', async (c) => {
     description: row.description ?? '',
     ideologies,
     hasPhoto: !!row.photo_key,
-    isPremium,
   };
 
   const { totalXp, achievements } = await getGamificationForUser(db, userId);
@@ -258,10 +255,6 @@ app.post('/api/actions/consume', async (c) => {
   if (!['likes', 'comments', 'proposals'].includes(action)) {
     throw new ValidationError('INVALID_ACTION', 'Acción no válida.');
   }
-  const premium = await isUserPremium(db, userId);
-  if (premium) {
-    return c.json({ ok: true, premium: true });
-  }
   if (!kv) {
     return c.json({ ok: true });
   }
@@ -380,8 +373,7 @@ app.post('/api/topics', async (c) => {
     (jwtName && String(jwtName).trim()) ||
     'Usuario';
 
-  const premium = await isUserPremium(db, userId);
-  if (!premium && kv) {
+  if (kv) {
     const rlResult = await checkAndIncrement(kv, userId, 'proposals');
     if (rlResult.allowed === false) {
       return c.json({ error: 'RATE_LIMIT_EXCEEDED', action: 'proposals', reason: rlResult.reason }, 429);
@@ -469,8 +461,7 @@ app.post('/api/topics/:topicId/proposals', async (c) => {
     'Usuario';
 
   // 5) Rate limit (solo tras validaciones exitosas)
-  const premium = await isUserPremium(db, userId);
-  if (!premium && kv) {
+  if (kv) {
     const rlResult = await checkAndIncrement(kv, userId, 'proposals');
     if (rlResult.allowed === false) {
       return c.json(
@@ -517,41 +508,6 @@ app.post('/api/topics/:topicId/proposals', async (c) => {
       notes: [],
     },
   });
-});
-
-app.get('/api/premium/status', async (c) => {
-  const { userId } = c.get('user');
-  const db = c.env.DB;
-  const premium = await isUserPremium(db, userId);
-  const tickets = await getTicketsByUser(db, userId);
-  const alias = getPremiumAlias(c.env);
-  return c.json({ isPremium: premium, alias, tickets });
-});
-
-app.post('/api/premium/ticket', async (c) => {
-  const { userId } = c.get('user');
-  const db = c.env.DB;
-  let body: { reference?: string; paymentDate?: string; amount?: number };
-  try {
-    body = await c.req.json();
-  } catch {
-    throw new ValidationError('INVALID_TICKET_DATA', 'Datos inválidos.');
-  }
-  const reference = String(body.reference ?? '').trim();
-  const paymentDate = String(body.paymentDate ?? '').trim();
-  const amount = Number(body.amount);
-  if (!reference || !paymentDate || !Number.isFinite(amount) || amount <= 0) {
-    throw new ValidationError('INVALID_TICKET_DATA', 'Completa referencia, fecha y monto.', [
-      { field: 'reference', message: 'Indica la referencia del pago.' },
-      { field: 'paymentDate', message: 'Indica la fecha del pago.' },
-      { field: 'amount', message: 'Indica un monto válido.' },
-    ]);
-  }
-  const result = await createPaymentTicket(db, userId, { reference, paymentDate, amount });
-  if ('error' in result) {
-    throw new ValidationError('TICKET_PERSISTENCE_ERROR', result.error);
-  }
-  return c.json({ ok: true, ticketId: result.id });
 });
 
 // Cast necesario: handleGetReport espera Context con solo DB y R2_BUCKET; AppBindings incluye Variables

@@ -79,7 +79,7 @@ curl -X POST "http://localhost:8787/api/cron/profile-photos-sanitize?cursor=<cur
 npm test
 ```
 
-Ejecuta Vitest sobre todo el proyecto (cliente y servidor). La suite de servidor usa mocks; no requiere servidor activo ni base de datos.
+Ejecuta Vitest sobre todo el proyecto (cliente y servidor). La suite de servidor usa mocks; no requiere servidor activo ni base de datos. `@playwright/test` está disponible en devDependencies para tests E2E.
 
 Archivos de test:
 

@@ -33,8 +33,6 @@ import {
   Tag,
   Plus,
   LogOut,
-  Crown,
-  Copy,
   Check
 } from 'lucide-react';
 
@@ -80,7 +78,7 @@ const formatTimeRemaining = (targetDate) => {
 };
 
 /** Páginas válidas para navegación (evita estados inválidos al volver del menú). */
-const VALID_PAGES = ['home', 'general', 'perfil', 'donations', 'nosotros', 'premium', 'category'];
+const VALID_PAGES = ['home', 'general', 'perfil', 'donations', 'nosotros', 'category'];
 
 export default function App() {
   const [estaAutenticado, setEstaAutenticado] = useState(false);
@@ -230,11 +228,8 @@ export default function App() {
   const [suggestedSubcategory, setSuggestedSubcategory] = useState('');
   const [suggestedWhy, setSuggestedWhy] = useState('');
 
-  // Modal de límite de tasa (rate limit) y Premium
+  // Modal de límite de tasa (rate limit)
   const [rateLimitModal, setRateLimitModal] = useState(null); // { action, reason } o null
-  const [ticketForm, setTicketForm] = useState({ reference: '', paymentDate: '', amount: '' });
-  const [ticketSubmitting, setTicketSubmitting] = useState(false);
-  const [ticketSubmitted, setTicketSubmitted] = useState(false);
 
   // Guardar votos en localStorage
   useEffect(() => {
@@ -964,14 +959,6 @@ export default function App() {
           <span className="hidden lg:inline text-[17px]">Perfil</span>
         </button>
         <button
-          onClick={() => setCurrentPage('premium')}
-          className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition text-left ${currentPage === 'premium' ? 'font-bold text-amber-400 bg-slate-900/70' : 'text-slate-400 hover:bg-slate-900/50'}`}
-          title="Premium"
-        >
-          <Crown className="w-6 h-6 shrink-0" />
-          <span className="hidden lg:inline text-[17px]">Premium</span>
-        </button>
-        <button
           onClick={() => { clearAuth(); setEstaAutenticado(false); }}
           className="w-full flex items-center gap-4 px-3 py-3 rounded-full transition text-left text-slate-500 hover:bg-red-900/20 hover:text-red-400"
           title="Salir"
@@ -1124,13 +1111,6 @@ export default function App() {
             >
               <User className="w-6 h-6 flex-shrink-0" />
               Perfil
-            </button>
-            <button
-              onClick={() => setCurrentPage('premium')}
-              className="w-full flex items-center gap-4 px-6 py-5 bg-amber-900/20 hover:bg-amber-900/30 border border-amber-600/50 text-amber-400 font-bold rounded-2xl transition text-left"
-            >
-              <Crown className="w-6 h-6 flex-shrink-0" />
-              Obtener Premium
             </button>
           </div>
         </main>
@@ -1973,107 +1953,12 @@ export default function App() {
       {/* Modal de límite de tasa (rate limit) */}
       {rateLimitModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setRateLimitModal(null)}>
-          <div className="bg-slate-800 rounded-2xl border border-amber-500/50 p-6 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-amber-900/40 border border-amber-500/40">
-                <Crown className="w-6 h-6 text-amber-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-100">Límite diario alcanzado</h3>
-                <p className="text-sm text-slate-400">{rateLimitModal.reason}</p>
-              </div>
-            </div>
-            <p className="text-slate-300 text-sm mb-6">
-              Con el plan <strong className="text-amber-400">Premium</strong> disfrutas de uso ilimitado: likes, comentarios y propuestas sin restricciones.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setRateLimitModal(null)} className="flex-1 px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 rounded-xl text-slate-300 text-sm font-semibold transition">
-                Cerrar
-              </button>
-              <button onClick={() => { setCurrentPage('premium'); setRateLimitModal(null); }} className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
-                <Crown className="w-4 h-4" />
-                Obtener Premium
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PÁGINA PREMIUM: alias bancario y formulario de ticket de pago */}
-      {currentPage === 'premium' && (
-        <div className="flex">
-          {LeftSidebar}
-          <div className="flex-1 min-w-0">
-        <main className="max-w-[680px] mx-auto px-4 py-6">
-          <button onClick={() => setCurrentPage('general')} className="flex items-center gap-2 text-slate-400 hover:text-amber-400 mb-6 transition">
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Volver</span>
-          </button>
-          <div className="flex items-center gap-4 mb-8">
-            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-600/20 border border-amber-500/40">
-              <Crown className="w-8 h-8 text-amber-400" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-100">Plan Premium</h2>
-              <p className="text-slate-400 text-sm">Likes, comentarios y propuestas ilimitados</p>
-            </div>
-          </div>
-
-          <div className="space-y-6 mb-8">
-            <div className="p-4 bg-amber-900/20 rounded-xl border border-amber-700/40">
-              <h3 className="font-bold text-amber-400 mb-2">Transferencia bancaria</h3>
-              <p className="text-slate-300 text-sm mb-3">Realiza tu pago a esta cuenta usando el alias:</p>
-              <AliasDisplay />
-            </div>
-
-            <div className="p-6 bg-slate-800/60 rounded-2xl border border-slate-700/50">
-              <h3 className="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
-                <Check className="w-5 h-5" />
-                Reportar mi pago
-              </h3>
-              {ticketSubmitted ? (
-                <div className="py-6 text-center">
-                  <p className="text-slate-200 font-semibold mb-2">Ticket enviado correctamente</p>
-                  <p className="text-slate-400 text-sm mb-4">Revisaremos tu pago y te activaremos Premium pronto.</p>
-                  <button onClick={() => { setTicketSubmitted(false); setTicketForm({ reference: '', paymentDate: '', amount: '' }); }} className="px-4 py-2 bg-slate-700/60 hover:bg-slate-700 rounded-xl text-slate-300 text-sm font-semibold">
-                    Enviar otro
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!ticketForm.reference.trim() || !ticketForm.paymentDate.trim() || !ticketForm.amount) return;
-                  setTicketSubmitting(true);
-                  try {
-                    await api.submitPaymentTicket({ reference: ticketForm.reference.trim(), paymentDate: ticketForm.paymentDate.trim(), amount: Number(ticketForm.amount) });
-                    setTicketSubmitted(true);
-                  } catch (err) {
-                    if (handleAccessDenied(err)) return;
-                    addError?.(err?.message || 'Error al enviar el ticket.');
-                  } finally {
-                    setTicketSubmitting(false);
-                  }
-                }} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">Número de comprobante/referencia</label>
-                    <input type="text" value={ticketForm.reference} onChange={e => setTicketForm(f => ({ ...f, reference: e.target.value }))} placeholder="Ej: 123456789" required className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-amber-500/50 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">Fecha del pago</label>
-                    <input type="date" value={ticketForm.paymentDate} onChange={e => setTicketForm(f => ({ ...f, paymentDate: e.target.value }))} required className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">Monto (USD)</label>
-                    <input type="number" min="0" step="0.01" value={ticketForm.amount} onChange={e => setTicketForm(f => ({ ...f, amount: e.target.value }))} placeholder="Ej: 10.00" required className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-amber-500/50 outline-none" />
-                  </div>
-                  <button type="submit" disabled={ticketSubmitting} className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition disabled:opacity-60 flex items-center gap-2">
-                    {ticketSubmitting ? 'Enviando...' : 'Enviar ticket'}
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        </main>
+          <div className="bg-slate-800 rounded-2xl border border-slate-700/50 p-6 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-100 mb-2">Límite diario alcanzado</h3>
+            <p className="text-slate-400 text-sm mb-6">{rateLimitModal.reason} Podrás volver a participar mañana.</p>
+            <button onClick={() => setRateLimitModal(null)} className="w-full px-4 py-2.5 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 rounded-xl text-slate-300 text-sm font-semibold transition">
+              Cerrar
+            </button>
           </div>
         </div>
       )}
@@ -2123,27 +2008,6 @@ export default function App() {
           </button>
         </div>
       </nav>
-    </div>
-  );
-}
-
-/** Componente que muestra el alias bancario y permite copiarlo. */
-function AliasDisplay() {
-  const [alias, setAlias] = useState('0000 0000 0000 0000 0000 0000');
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    api.getPremiumStatus().then(r => { if (r?.alias) setAlias(r.alias); }).catch(() => {});
-  }, []);
-  const copy = () => {
-    navigator.clipboard?.writeText(alias).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
-  };
-  return (
-    <div className="flex items-center justify-between gap-3 p-3 bg-slate-800/60 rounded-xl border border-slate-600/50">
-      <code className="text-cyan-400 font-mono text-sm break-all">{alias}</code>
-      <button onClick={copy} className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-cyan-400 rounded-lg text-xs font-bold transition">
-        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-        {copied ? 'Copiado' : 'Copiar'}
-      </button>
     </div>
   );
 }

@@ -21,6 +21,5 @@ export interface ProfileResponse {
   description: string;
   ideologies: string[];
   hasPhoto: boolean;
-  isPremium: boolean;
   gamification: GamificationInfo;
 }

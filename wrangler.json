@@ -9,8 +9,7 @@
 		"enabled": true
 	},
 	"vars": {
-		"DEV_BYPASS_ALLOWED": "false",
-		"PREMIUM_ALIAS": "0000 0000 0000 0000 0000 0000"
+		"DEV_BYPASS_ALLOWED": "false"
 	},
 	"pages_build_output_dir": "./dist",
 	"d1_databases": [

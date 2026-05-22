@@ -33,7 +33,6 @@ El middleware `createAuthMiddleware()` verifica el JWT de Google con JWKS. El `u
     "description": "string",
     "ideologies": ["string"],
     "hasPhoto": true,
-    "isPremium": false,
     "gamification": {
       "totalXp": 120,
       "achievements": [{ "id": "first_counter_proposal", "name": "Primera contrapropuesta" }]
@@ -98,7 +97,7 @@ Array de objetos con topic, proposals anidadas y notes por propuesta.
 
 - El autor se resuelve desde el perfil en D1 (nunca del body — Zero Trust).
 - Dispara evento de gamificación `CREATE_COUNTER_PROPOSAL` en background.
-- Consume cuota de rate limit `proposals` para usuarios no premium.
+- Consume cuota de rate limit `proposals`.
 - Retorna `400 INVALID_TOPIC_DATA` si faltan campos requeridos.
 
 **Respuesta:**
@@ -124,7 +123,7 @@ Array de objetos con topic, proposals anidadas y notes por propuesta.
 
 - El autor se resuelve desde el perfil en D1 (nunca del body — Zero Trust).
 - Dispara evento de gamificación `CREATE_COUNTER_PROPOSAL` en background.
-- Consume cuota de rate limit `proposals` para usuarios no premium.
+- Consume cuota de rate limit `proposals`.
 
 **Respuesta:**
 ```json
@@ -159,30 +158,11 @@ Array de objetos con topic, proposals anidadas y notes por propuesta.
 
 Valores válidos de `action`: `likes`, `comments`, `proposals`.
 
-- Usuarios premium: siempre retornan `{ ok: true, premium: true }`.
-- Usuarios free: se verifica contra KV. Si el límite se excede, retorna `429`.
+- Se verifica contra KV. Si el límite se excede, retorna `429`.
 
 **429 response:**
 ```json
 { "error": "RATE_LIMIT_EXCEEDED", "action": "likes", "reason": "Límite diario alcanzado." }
-```
-
----
-
-### Premium
-
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `GET` | `/api/premium/status` | Estado premium del usuario y tickets |
-| `POST` | `/api/premium/ticket` | Envía ticket de pago para activación manual |
-
-**POST /api/premium/ticket — body:**
-```json
-{
-  "reference": "string",
-  "paymentDate": "YYYY-MM-DD",
-  "amount": 10.00
-}
 ```
 
 ---

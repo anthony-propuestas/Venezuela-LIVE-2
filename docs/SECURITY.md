@@ -47,7 +47,6 @@ Abre un issue privado en el repositorio o contacta directamente al mantenedor. N
 
 ### Rate Limiting
 - Cuotas diarias por usuario en **Cloudflare KV** para `likes`, `comments`, `proposals`.
-- Usuarios premium (`isPremium = 1` en D1) no están sujetos a límites.
 
 ### Cron / endpoints internos
 - El header `X-Cron-Secret` (valor de la variable `CRON_SECRET`) autentica los endpoints de cron.
@@ -57,6 +56,20 @@ Abre un issue privado en el repositorio o contacta directamente al mantenedor. N
 ### Dependencias
 - Auditoría estática documentada en `docs/PLAN SEGU Y USAB/Fase 1 Auditoría Heurística y Inyecciones/A1 revision de dependencias estaticas.md`.
 - Baseline de audit en `docs/audit-baseline.json`.
+
+### HTTP Headers
+
+Aplicados vía `public/_headers` (Cloudflare Pages los inyecta automáticamente en todas las rutas `/*`). También hay un `<meta>` CSP equivalente en `index.html` como fallback.
+
+| Header | Valor |
+|--------|-------|
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `DENY` |
+| `X-XSS-Protection` | `0` (desactivado; el navegador usa CSP) |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), fullscreen=(self)` |
+| `Strict-Transport-Security` | `max-age=3600; includeSubDomains` (rollout conservador) |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleusercontent.com https://flagcdn.com; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com; frame-src https://accounts.google.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests` |
 
 ---
 

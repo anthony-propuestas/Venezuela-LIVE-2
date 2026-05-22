@@ -10,11 +10,6 @@ vi.mock('./domain/reports/controllers.js', () => ({
 vi.mock('./middlewares/rateLimit.middleware.js', () => ({
   checkAndIncrement: vi.fn(),
 }));
-vi.mock('./premium.js', () => ({
-  isUserPremium: vi.fn().mockResolvedValue(false),
-  createPaymentTicket: vi.fn(),
-  getTicketsByUser: vi.fn().mockResolvedValue([]),
-}));
 vi.mock('./repositories/r2.repository.js', () => ({
   deleteProfilePhotoObject: vi.fn(),
   getProfilePhotoObject: vi.fn(),
@@ -384,5 +379,51 @@ describe('Admin categories routes', () => {
     const body = (await res.json()) as { ok: boolean };
     expect(body.ok).toBe(true);
     expect(mockRunCat).toHaveBeenCalledOnce();
+  });
+});
+
+const premiumEnv = {
+  DEV_BYPASS_ALLOWED: 'true',
+  ALLOWLIST_EMAILS: '',
+  DB: {} as unknown,
+  R2_BUCKET: {} as unknown,
+  CRON_SECRET: 'test-secret',
+  ASSETS: { fetch: async () => new Response('Not Found', { status: 404 }) } as unknown,
+} as unknown as Env;
+
+describe('Premium routes eliminadas', () => {
+  it('GET /api/premium/status → 404', async () => {
+    const res = await app.request(
+      '/api/premium/status',
+      { headers: { Authorization: 'Bearer __dev_bypass__' } },
+      premiumEnv,
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('POST /api/premium/ticket → 404', async () => {
+    const res = await app.request(
+      '/api/premium/ticket',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 10 }),
+      },
+      premiumEnv,
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('GET /api/profile no incluye isPremium en la respuesta', async () => {
+    const res = await app.request(
+      '/api/profile',
+      { headers: { Authorization: 'Bearer __dev_bypass__' } },
+      devEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { profile: null | Record<string, unknown> };
+    if (body.profile !== null) {
+      expect(body.profile).not.toHaveProperty('isPremium');
+    }
   });
 });
