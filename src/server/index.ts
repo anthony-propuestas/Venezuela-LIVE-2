@@ -266,6 +266,50 @@ app.post('/api/actions/consume', async (c) => {
   return c.json({ error: 'RATE_LIMIT_EXCEEDED', action, reason }, 429);
 });
 
+/** Registra un voto (like/dislike) en una propuesta y persiste el conteo en la DB. */
+app.post('/api/proposals/:proposalId/vote', async (c) => {
+  const { userId } = c.get('user');
+  const proposalId = c.req.param('proposalId');
+  const body = await c.req.json<{ type: 'up' | 'down' }>();
+  if (!['up', 'down'].includes(body.type)) {
+    return c.json({ error: 'INVALID_TYPE' }, 400);
+  }
+  const db = c.env.DB;
+  const kv = c.env.RATE_LIMIT_KV;
+
+  if (kv) {
+    const rateResult = await checkAndIncrement(kv, userId, 'likes');
+    if (!rateResult.allowed) {
+      return c.json({ error: 'RATE_LIMIT_EXCEEDED', reason: rateResult.reason }, 429);
+    }
+  }
+
+  const existing = await db
+    .prepare('SELECT vote_type FROM user_votes WHERE user_id = ? AND proposal_id = ?')
+    .bind(userId, proposalId)
+    .first<{ vote_type: string }>();
+  if (existing) {
+    return c.json({ error: 'ALREADY_VOTED' }, 409);
+  }
+
+  const updateSql = body.type === 'up'
+    ? 'UPDATE proposals SET upvotes = upvotes + 1 WHERE id = ?'
+    : 'UPDATE proposals SET downvotes = downvotes + 1 WHERE id = ?';
+
+  await db.batch([
+    db.prepare('INSERT INTO user_votes (user_id, proposal_id, vote_type) VALUES (?, ?, ?)')
+      .bind(userId, proposalId, body.type),
+    db.prepare(updateSql).bind(proposalId),
+  ]);
+
+  const updated = await db
+    .prepare('SELECT upvotes, downvotes FROM proposals WHERE id = ?')
+    .bind(proposalId)
+    .first<{ upvotes: number; downvotes: number }>();
+
+  return c.json({ upvotes: updated?.upvotes ?? 0, downvotes: updated?.downvotes ?? 0 });
+});
+
 /** Lista todos los temas con sus propuestas y notas. */
 app.get('/api/topics', async (c) => {
   const db = c.env.DB;

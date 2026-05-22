@@ -636,13 +636,27 @@ export default function App() {
     setThreads(updatedThreads);
     setUserVotes(updatedUserVotes);
 
-    // Rate limit en segundo plano con posible rollback
     try {
-      const result = await api.consumeAction('likes');
+      const result = await api.voteProposal(proposalId, voteType);
       if (!result.ok) {
-        setRateLimitModal({ action: result.action || 'likes', reason: result.reason });
+        if (result.rateLimited) setRateLimitModal({ action: result.action || 'likes', reason: result.reason });
         setThreads(prevThreads);
         setUserVotes(prevUserVotes);
+      } else {
+        setThreads(prev => prev.map(thread => {
+          if (thread.id !== threadId) return thread;
+          return {
+            ...thread,
+            proposals: thread.proposals.map(prop =>
+              prop.id !== proposalId ? prop : {
+                ...prop,
+                upvotes: result.upvotes,
+                downvotes: result.downvotes,
+                netScore: result.upvotes - result.downvotes,
+              }
+            ),
+          };
+        }));
       }
     } catch (err) {
       if (!handleAccessDenied(err)) {

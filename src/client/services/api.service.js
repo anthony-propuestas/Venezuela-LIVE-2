@@ -188,6 +188,32 @@ export async function consumeAction(action) {
   return { ok: true };
 }
 
+export async function voteProposal(proposalId, type) {
+  const credential = getCredential();
+  if (!credential) throw new Error('SESSION_EXPIRED');
+  const res = await fetch(`${API_BASE}/api/proposals/${encodeURIComponent(proposalId)}/vote`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${credential}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ type }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 409) return { ok: false, alreadyVoted: true };
+  if (res.status === 429) return { ok: false, rateLimited: true, action: 'likes', reason: data.reason };
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('SESSION_EXPIRED');
+    if (res.status === 403) {
+      const e = new Error(data?.error || 'Acceso denegado.');
+      e.code = 'ACCESS_DENIED';
+      throw e;
+    }
+    throw new Error(data?.error || `Error (${res.status})`);
+  }
+  return { ok: true, upvotes: data.upvotes, downvotes: data.downvotes };
+}
+
 /**
  * Crea una contrapropuesta en un tema existente.
  * Zero Trust: el autor se deriva en el backend desde el perfil del usuario autenticado.

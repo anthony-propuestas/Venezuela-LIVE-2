@@ -4,7 +4,7 @@
 Detectar discrepancias entre el código real y los archivos en `docs/` antes de que se acumulen y confundan a futuros colaboradores.
 
 ## Cuándo ejecutar
-- Antes de cada release
+- Antes de cada COMMINT
 - Al agregar o modificar un endpoint, tabla, o feature
 - Al editar cualquier archivo en `docs/`
 

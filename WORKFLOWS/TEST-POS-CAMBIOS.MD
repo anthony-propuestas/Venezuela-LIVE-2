@@ -1,6 +1,6 @@
 # Workflow: Test Post-Cambios
 
-Después de cada commit, ejecutar este workflow para cubrir con tests lo que cambió,
+Antes de hacer un commit, ejecutar este workflow para cubrir con tests lo que cambió,
 actualizar lo que haya que actualizar, y eliminar lo obsoleto.
 
 ---

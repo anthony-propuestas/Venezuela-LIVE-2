@@ -35,6 +35,7 @@ vi.mock('./repositories/profile.repository.js', () => ({
 import { app } from './index.js';
 import { upsertProfile } from './repositories/profile.repository.js';
 import { signAdminToken } from './middlewares/admin.middleware.js';
+import { checkAndIncrement } from './middlewares/rateLimit.middleware.js';
 import type { Env } from './types.js';
 
 const ADMIN_EMAIL = 'admin@test.com';
@@ -425,5 +426,267 @@ describe('Premium routes eliminadas', () => {
     if (body.profile !== null) {
       expect(body.profile).not.toHaveProperty('isPremium');
     }
+  });
+});
+
+// ─── Vote endpoint ─────────────────────────────────────────────────────────────
+
+const mockVoteFirst = vi.fn();
+const mockVoteBind = vi.fn().mockReturnValue({ first: mockVoteFirst });
+const mockVotePrepare = vi.fn().mockReturnValue({ bind: mockVoteBind });
+const mockVoteBatch = vi.fn().mockResolvedValue([{}, {}]);
+
+const voteEnv = {
+  DEV_BYPASS_ALLOWED: 'true',
+  ALLOWLIST_EMAILS: '',
+  DB: { prepare: mockVotePrepare, batch: mockVoteBatch },
+  R2_BUCKET: {} as unknown,
+  CRON_SECRET: 'test-secret',
+  ASSETS: {} as unknown,
+} as unknown as Env;
+
+describe('POST /api/proposals/:proposalId/vote', () => {
+  beforeEach(() => {
+    mockVoteFirst.mockReset();
+    mockVoteBatch.mockClear();
+    mockVotePrepare.mockClear();
+    vi.mocked(checkAndIncrement).mockReset();
+  });
+
+  it('sin auth → 401', async () => {
+    const res = await app.request(
+      '/api/proposals/p1/vote',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'up' }),
+      },
+      noAuthEnv,
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('type inválido → 400 INVALID_TYPE', async () => {
+    const res = await app.request(
+      '/api/proposals/p1/vote',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'bad' }),
+      },
+      voteEnv,
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('INVALID_TYPE');
+  });
+
+  it('rate limit excedido → 429 RATE_LIMIT_EXCEEDED', async () => {
+    vi.mocked(checkAndIncrement).mockResolvedValueOnce({ allowed: false, reason: 'hourly' });
+    const kvEnv = { ...voteEnv, RATE_LIMIT_KV: {} } as unknown as Env;
+    const res = await app.request(
+      '/api/proposals/p1/vote',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'up' }),
+      },
+      kvEnv,
+    );
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('RATE_LIMIT_EXCEEDED');
+  });
+
+  it('ya votó esta semana → 409 ALREADY_VOTED', async () => {
+    mockVoteFirst.mockResolvedValueOnce({ vote_type: 'up' });
+    const res = await app.request(
+      '/api/proposals/p1/vote',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'up' }),
+      },
+      voteEnv,
+    );
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('ALREADY_VOTED');
+  });
+
+  it('voto válido → 200 con upvotes y downvotes actualizados', async () => {
+    mockVoteFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ upvotes: 1, downvotes: 0 });
+    const res = await app.request(
+      '/api/proposals/p1/vote',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'up' }),
+      },
+      voteEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { upvotes: number; downvotes: number };
+    expect(body.upvotes).toBe(1);
+    expect(body.downvotes).toBe(0);
+    expect(mockVoteBatch).toHaveBeenCalledOnce();
+  });
+});
+
+// ─── POST /api/actions/consume ────────────────────────────────────────────────
+
+const consumeKvEnv = { ...devEnv, RATE_LIMIT_KV: {} } as unknown as Env;
+
+describe('POST /api/actions/consume', () => {
+  beforeEach(() => {
+    vi.mocked(checkAndIncrement).mockReset();
+  });
+
+  it('sin auth → 401', async () => {
+    const res = await app.request(
+      '/api/actions/consume',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'likes' }),
+      },
+      noAuthEnv,
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('action inválida → 400 INVALID_ACTION', async () => {
+    const res = await app.request(
+      '/api/actions/consume',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'invalid' }),
+      },
+      devEnv,
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('INVALID_ACTION');
+  });
+
+  it('sin KV → 200 ok inmediato', async () => {
+    const res = await app.request(
+      '/api/actions/consume',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'likes' }),
+      },
+      devEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
+  });
+
+  it('con KV, rate limit excedido → 429 RATE_LIMIT_EXCEEDED', async () => {
+    vi.mocked(checkAndIncrement).mockResolvedValueOnce({ allowed: false, reason: 'daily' });
+    const res = await app.request(
+      '/api/actions/consume',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'likes' }),
+      },
+      consumeKvEnv,
+    );
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('RATE_LIMIT_EXCEEDED');
+  });
+
+  it('con KV, acción válida → 200 ok', async () => {
+    vi.mocked(checkAndIncrement).mockResolvedValueOnce({ allowed: true });
+    const res = await app.request(
+      '/api/actions/consume',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'comments' }),
+      },
+      consumeKvEnv,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
+  });
+});
+
+// ─── Rate limit universal (post premium removal) ──────────────────────────────
+
+const topicsKvEnv = { ...topicsEnv, RATE_LIMIT_KV: {} } as unknown as Env;
+
+describe('POST /api/topics – rate limit universal', () => {
+  beforeEach(() => {
+    vi.mocked(checkAndIncrement).mockReset();
+    mockBatch.mockClear();
+  });
+
+  it('con KV y rate limit excedido → 429 RATE_LIMIT_EXCEEDED', async () => {
+    vi.mocked(checkAndIncrement).mockResolvedValueOnce({ allowed: false, reason: 'daily' });
+    const res = await app.request(
+      '/api/topics',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'Política',
+          topicText: 'Tema de prueba',
+          proposalTitle: 'Mi propuesta',
+          proposalDescription: 'Una descripción.',
+        }),
+      },
+      topicsKvEnv,
+    );
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('RATE_LIMIT_EXCEEDED');
+  });
+});
+
+const mockProposalFirst = vi.fn();
+const proposalsKvEnv = {
+  DEV_BYPASS_ALLOWED: 'true',
+  ALLOWLIST_EMAILS: '',
+  DB: {
+    prepare: vi.fn().mockReturnValue({
+      bind: vi.fn().mockReturnValue({ first: mockProposalFirst }),
+    }),
+  },
+  R2_BUCKET: {} as unknown,
+  CRON_SECRET: 'test-secret',
+  ASSETS: {} as unknown,
+  RATE_LIMIT_KV: {},
+} as unknown as Env;
+
+describe('POST /api/topics/:topicId/proposals – rate limit universal', () => {
+  beforeEach(() => {
+    vi.mocked(checkAndIncrement).mockReset();
+    mockProposalFirst.mockReset();
+  });
+
+  it('con KV y rate limit excedido → 429 RATE_LIMIT_EXCEEDED', async () => {
+    mockProposalFirst.mockResolvedValueOnce({ id: 'test-topic-id' });
+    vi.mocked(checkAndIncrement).mockResolvedValueOnce({ allowed: false, reason: 'daily' });
+    const res = await app.request(
+      '/api/topics/test-topic-id/proposals',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer __dev_bypass__', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Propuesta test', description: 'Descripción de prueba.' }),
+      },
+      proposalsKvEnv,
+    );
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('RATE_LIMIT_EXCEEDED');
   });
 });

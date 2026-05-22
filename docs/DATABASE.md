@@ -99,6 +99,20 @@ CREATE TABLE categories (
 );
 ```
 
+#### `user_votes` (migración 0012 + 0013)
+Registro de votos por usuario y propuesta. Un voto por usuario por propuesta para siempre (perpetuo).
+
+```sql
+CREATE TABLE user_votes (
+  user_id      TEXT NOT NULL,
+  proposal_id  TEXT NOT NULL,
+  vote_type    TEXT NOT NULL CHECK(vote_type IN ('up', 'down')),
+  voted_at     TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, proposal_id)
+);
+CREATE INDEX idx_user_votes_proposal ON user_votes(proposal_id);
+```
+
 #### `user_achievements` (migración 0006)
 Logros desbloqueados por usuario.
 
@@ -109,7 +123,7 @@ Tickets de pago enviados por usuarios para activación premium.
 
 ## Migraciones
 
-Las migraciones están en `migrations/` numeradas `0001`–`0011`. Se aplican en orden.
+Las migraciones están en `migrations/` numeradas `0001`–`0013`. Se aplican en orden.
 
 **Aplicar en local:**
 ```bash

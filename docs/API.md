@@ -145,6 +145,32 @@ Array de objetos con topic, proposals anidadas y notes por propuesta.
 
 ---
 
+### Votos
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/api/proposals/:proposalId/vote` | Registra voto en una propuesta |
+
+**Body:**
+```json
+{ "type": "up" | "down" }
+```
+
+- Un voto por usuario por propuesta, permanente (no se resetea).
+- Consume cuota de rate limit `likes`.
+
+**Respuesta:**
+```json
+{ "upvotes": 5, "downvotes": 2 }
+```
+
+**Errores:**
+- `400 INVALID_TYPE` — el campo `type` no es `"up"` ni `"down"`
+- `409 ALREADY_VOTED` — el usuario ya votó esta propuesta
+- `429` — rate limit de `likes` agotado
+
+---
+
 ### Rate Limiting
 
 | Método | Ruta | Descripción |
@@ -234,6 +260,7 @@ Errores: `400` si falta `name` o `slug`; `409` si el slug ya existe.
 | `NOT_FOUND` | 404 | Recurso no encontrado |
 | `UNAUTHORIZED` | 401 | Token ausente o inválido |
 | `RATE_LIMIT_EXCEEDED` | 429 | Cuota diaria agotada |
+| `ALREADY_VOTED` | 409 | El usuario ya votó esta propuesta (voto permanente) |
 | `DEPENDENCY_ERROR` | 503 | Error de configuración interna |
 
 **Formato de error:**
