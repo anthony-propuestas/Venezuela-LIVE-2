@@ -63,14 +63,6 @@ export async function verifyAuth(c: Context<AppBindings>): Promise<User | null> 
   }
 }
 
-function getAllowlistEmails(allowlistEnv: string | undefined): string[] {
-  if (!allowlistEnv || typeof allowlistEnv !== 'string') return [];
-  return allowlistEnv
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 /** Middleware que exige JWT (o bypass en dev) en todas las rutas /api/* excepto /api/cron/weekly-reports. */
 export function createAuthMiddleware() {
   return async (c: Context<AppBindings>, next: () => Promise<void>) => {
@@ -87,16 +79,6 @@ export function createAuthMiddleware() {
       const unauthorized = new UnauthorizedError();
       const { status, body } = mapErrorToResponseBody(unauthorized, isDevBypassAllowed(c.env));
       return c.json(body, status);
-    }
-    const allowlist = getAllowlistEmails(c.env.ALLOWLIST_EMAILS);
-    if (allowlist.length > 0 && user.userId !== DEV_BYPASS_USER.userId) {
-      const emailLower = user.email.toLowerCase();
-      if (!allowlist.includes(emailLower)) {
-        return c.json(
-          { error: 'Acceso denegado. Correo no autorizado.' },
-          403
-        );
-      }
     }
     c.set('user', user);
     await next();

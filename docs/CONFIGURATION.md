@@ -23,7 +23,6 @@ Se configuran en `.dev.vars` (local) o en el dashboard de Cloudflare Pages (prod
 | `ADMIN_EMAIL` | Sí | Email del administrador para login en el panel (`POST /api/admin/login`). |
 | `ADMIN_PASSWORD` | Sí | Contraseña de admin y clave de firma del JWT admin (HS256, 8h). |
 | `DEV_BYPASS_ALLOWED` | No | `"true"` activa el bypass de auth en dev. Nunca `"true"` en producción. |
-| `ALLOWLIST_EMAILS` | No | Emails autorizados, separados por coma. Si está vacía o ausente, no se aplica filtrado. Si tiene valor, el middleware bloquea con 403 a cualquier email no listado. |
 
 ---
 

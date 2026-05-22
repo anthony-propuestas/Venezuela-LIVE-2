@@ -14,8 +14,7 @@ export type Env = {
   DEV_BYPASS_ALLOWED?: string;
   /** Secreto para invocar el cron semanal vía HTTP (solo header X-Cron-Secret). */
   CRON_SECRET: string;
-  /** Lista de correos permitidos (separados por coma). Solo ellos pueden acceder. */
-  ALLOWLIST_EMAILS: string;
+  ALLOWLIST_EMAILS?: string;
   /** Credenciales del panel de administración. */
   ADMIN_EMAIL?: string;
   ADMIN_PASSWORD?: string;

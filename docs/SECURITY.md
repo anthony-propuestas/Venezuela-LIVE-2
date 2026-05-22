@@ -15,12 +15,6 @@ Abre un issue privado en el repositorio o contacta directamente al mantenedor. N
 - El `userId` y el rol se resuelven desde D1 en cada request; el cliente no puede elevar su propio rol.
 - **Excepción:** el JWT del panel admin (`/admin`) se guarda en `sessionStorage` del navegador. Es un flujo separado al OAuth de usuario; el token expira en 8 horas y no contiene datos de sesión de usuario.
 
-### Allowlist de emails
-- Si la variable `ALLOWLIST_EMAILS` está definida (valor no vacío), el middleware de auth verifica que el email del token Google esté en la lista.
-- Emails no incluidos reciben `403 Acceso denegado. Correo no autorizado.`
-- La lista es un string separado por comas (ej. `user@example.com,otro@example.com`).
-- Si `ALLOWLIST_EMAILS` está vacía o no definida, no se aplica ningún filtro y cualquier usuario autenticado con Google puede acceder.
-
 ### Admin JWT Auth
 - Las rutas `/api/admin/*` usan un middleware dedicado (`src/server/middlewares/admin.middleware.ts`), separado del flujo Google OAuth.
 - El auth middleware regular omite `/api/admin/*` explícitamente; el admin middleware toma el control.

@@ -7,7 +7,6 @@ type AppBindings = { Bindings: Env; Variables: { user: User } };
 
 const baseEnv = {
   DEV_BYPASS_ALLOWED: undefined,
-  ALLOWLIST_EMAILS: '',
   DB: {} as unknown,
   R2_BUCKET: {} as unknown,
   CRON_SECRET: 'secret',
@@ -22,6 +21,21 @@ function buildTestApp() {
   app.get('/api/profile', (c) => c.json({ reached: true }));
   return app;
 }
+
+describe('createAuthMiddleware – sin allowlist', () => {
+  it('permite acceso a /api/profile con dev bypass (sin bloqueo por allowlist)', async () => {
+    const app = buildTestApp();
+    const env = { ...baseEnv, DEV_BYPASS_ALLOWED: 'true' } as unknown as Env;
+    const res = await app.request(
+      '/api/profile',
+      { headers: { Authorization: 'Bearer __dev_bypass__' } },
+      env
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { reached: boolean };
+    expect(body.reached).toBe(true);
+  });
+});
 
 describe('createAuthMiddleware – cron allowlist', () => {
   const app = buildTestApp();

@@ -16,7 +16,6 @@ Resumen de los controles de seguridad actuales en Venezuela LIVE, alineados con 
 ## 2. Identidad y autor (Zero Trust: nunca confiar en el cliente)
 
 - **Contrapropuestas:** El autor de una contrapropuesta **nunca** se toma del body de la petición. El backend obtiene la identidad del usuario autenticado (`c.get('user')`) y del perfil en D1 (`displayName`, `username` o nombre del JWT), con fallback seguro a `"Usuario"`.
-- **Allowlist opcional:** Si se configura `ALLOWLIST_EMAILS`, solo los correos de esa lista pueden acceder a la API; el resto recibe 403.
 
 ---
 
